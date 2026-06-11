@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auto-agent-backend"
+version = "0.1.0"
+description = "Auto-agent backend POC: planner + fuzzy ADK agents + Playwright executor."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "playwright>=1.42",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "python-dotenv>=1.0",
+    "google-adk>=1.28",
+    "litellm>=1.40",
+    "sqlmodel>=0.0.16",
+    "cryptography>=42.0",
+    "python-multipart>=0.0.9",
+    "apscheduler>=3.10",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]

@@ -1,0 +1,45 @@
+# Secrets
+.env
+.env.local
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SQLite databases (platform persistence)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Fernet master key (auto-agent-platform)
+.secret_key
+.secret_key.*
+
+# Migration markers (per-workflow-credentials)
+.cleared_credentials
+
+# Playwright
+playwright-report/
+test-results/
