@@ -16,7 +16,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.staticfiles import StaticFiles
 from pydantic import ValidationError
 from sqlmodel import Session, select
 
@@ -27,6 +28,21 @@ from app.schemas import GenerateWorkflowRequest, Workflow as WorkflowSchema
 
 
 logger = logging.getLogger(__name__)
+
+
+class SPAStaticFiles(StaticFiles):
+    """Serve the built SPA; unknown non-file paths fall back to index.html."""
+
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404:
+                raise
+            leaf = path.rsplit("/", 1)[-1]
+            if leaf and "." in leaf:
+                raise
+            return await super().get_response("index.html", scope)
 
 
 def _seed_sample_if_empty() -> None:
@@ -130,10 +146,10 @@ async def lifespan(_app: FastAPI):
     init_db()
     ensure_org_columns()
     ensure_workflow_visibility_column()
+    ensure_user_platform_admin_column()
     bootstrap_orgs_on_startup()
     ensure_worker_tables()
     ensure_desktop_client_columns()
-    ensure_user_platform_admin_column()
     ensure_oauth_domain_rule_table()
     ensure_user_identity_table()
     ensure_run_worker_columns()
@@ -498,6 +514,6 @@ async def ws_stream(run_id: str, ws: WebSocket) -> None:
 if _FRONTEND_DIR.is_dir():
     app.mount(
         "/",
-        StaticFiles(directory=str(_FRONTEND_DIR), html=True),
+        SPAStaticFiles(directory=str(_FRONTEND_DIR), html=True),
         name="frontend",
     )
