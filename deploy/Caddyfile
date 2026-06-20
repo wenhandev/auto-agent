@@ -4,5 +4,14 @@
 
 {$DOMAIN:rpa.wenhandev.com} {
 	encode gzip zstd
-	reverse_proxy app:8000
+
+	# Public client installers (free static hosting on this VM).
+	handle_path /downloads/* {
+		root * /srv/downloads
+		file_server
+	}
+
+	handle {
+		reverse_proxy app:8000
+	}
 }

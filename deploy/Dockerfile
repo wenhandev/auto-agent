@@ -5,6 +5,7 @@ WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
+COPY frontend/production.env.dist .env.production
 RUN npm run build
 
 FROM python:3.12-slim AS backend

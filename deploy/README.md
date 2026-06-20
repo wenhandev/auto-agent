@@ -78,6 +78,30 @@ VITE_CLOUD_URL=https://rpa.wenhandev.com npm run tauri build
 
 Release builds must **not** spawn a local cloud on port 8001 (dev-only monolith behavior).
 
+## Client downloads (free — same VM)
+
+Installers are served at **`https://rpa.wenhandev.com/downloads/`** (Caddy static files on this VM; no extra cost).
+
+| File | URL |
+|------|-----|
+| macOS | `/downloads/Auto-Agent-Client-macos.dmg` |
+| Windows | `/downloads/Auto-Agent-Client-windows.msi` |
+| Linux | `/downloads/Auto-Agent-Client-linux.AppImage` |
+
+**Build & publish:**
+
+1. Tag `client-v0.1.0` → GitHub Actions **Release client** builds installers.
+2. Upload to VM (pick one):
+   - **Automatic:** add repo secret `GCP_SA_KEY` (service account JSON with Compute OS Login / instance access). The workflow uploads after build.
+   - **Manual:** download CI artifacts, then:
+     ```bash
+     chmod +x deploy/publish-client-downloads.sh
+     ./deploy/publish-client-downloads.sh /path/to/release-assets
+     ```
+3. Redeploy app if you changed download URLs in `frontend/production.env.dist`.
+
+Private GitHub Releases are **not** used for end-user downloads — only this VM path is public.
+
 ## Updates
 
 ```bash

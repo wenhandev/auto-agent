@@ -7,8 +7,11 @@ export interface ClientDownloadTarget {
   url: string | null;
 }
 
-const DEFAULT_RELEASES_URL =
-  "https://github.com/wenhandev/auto-agent/releases";
+const DEFAULT_DOWNLOAD_URLS: Record<ClientPlatform, string> = {
+  macos: "https://rpa.wenhandev.com/downloads/Auto-Agent-Client-macos.dmg",
+  windows: "https://rpa.wenhandev.com/downloads/Auto-Agent-Client-windows.msi",
+  linux: "https://rpa.wenhandev.com/downloads/Auto-Agent-Client-linux.AppImage",
+};
 
 function envUrl(key: string): string | null {
   const value = import.meta.env[key]?.trim();
@@ -17,26 +20,24 @@ function envUrl(key: string): string | null {
 
 /** Resolved download targets for the web UI (env overrides per platform). */
 export function clientDownloadTargets(): ClientDownloadTarget[] {
-  const releases = envUrl("VITE_CLIENT_RELEASES_URL") ?? DEFAULT_RELEASES_URL;
-
   return [
     {
       platform: "macos",
       labelKey: "clientDownload.platformMac",
       hintKey: "clientDownload.platformMacHint",
-      url: envUrl("VITE_CLIENT_DOWNLOAD_MACOS") ?? releases,
+      url: envUrl("VITE_CLIENT_DOWNLOAD_MACOS") ?? DEFAULT_DOWNLOAD_URLS.macos,
     },
     {
       platform: "windows",
       labelKey: "clientDownload.platformWindows",
       hintKey: "clientDownload.platformWindowsHint",
-      url: envUrl("VITE_CLIENT_DOWNLOAD_WINDOWS") ?? releases,
+      url: envUrl("VITE_CLIENT_DOWNLOAD_WINDOWS") ?? DEFAULT_DOWNLOAD_URLS.windows,
     },
     {
       platform: "linux",
       labelKey: "clientDownload.platformLinux",
       hintKey: "clientDownload.platformLinuxHint",
-      url: envUrl("VITE_CLIENT_DOWNLOAD_LINUX") ?? releases,
+      url: envUrl("VITE_CLIENT_DOWNLOAD_LINUX") ?? DEFAULT_DOWNLOAD_URLS.linux,
     },
   ];
 }

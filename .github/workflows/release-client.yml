@@ -135,8 +135,10 @@ jobs:
           fi
           src="${matches[0]}"
           ext="${src##*.}"
-          dest="${OUT}/Auto-Agent-Client-${VERSION}-${{ matrix.platform }}.${ext}"
-          cp "${src}" "${dest}"
+          stable="Auto-Agent-Client-${{ matrix.platform }}.${ext}"
+          versioned="Auto-Agent-Client-${VERSION}-${{ matrix.platform }}.${ext}"
+          cp "${src}" "${OUT}/${stable}"
+          cp "${src}" "${OUT}/${versioned}"
           ls -la "${OUT}"
 
       - name: Upload release asset
@@ -185,3 +187,42 @@ jobs:
           files: release-assets/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-downloads:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: release-*
+          merge-multiple: true
+
+      - name: List installers
+        run: find release-assets -type f -ls
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload to rpa.wenhandev.com (VM static /downloads)
+        env:
+          GCP_PROJECT: auto-agent-500007
+          GCP_VM: auto-agent-rpa
+          GCP_ZONE: asia-east1-b
+        run: |
+          set -euo pipefail
+          REMOTE="/opt/auto-agent/deploy/downloads"
+          gcloud compute ssh "${GCP_VM}" --project="${GCP_PROJECT}" --zone="${GCP_ZONE}" \
+            --command="mkdir -p ${REMOTE} && chmod 755 ${REMOTE}"
+          while IFS= read -r -d '' f; do
+            gcloud compute scp "${f}" "${GCP_VM}:${REMOTE}/" \
+              --project="${GCP_PROJECT}" --zone="${GCP_ZONE}"
+            echo "uploaded $(basename "${f}")"
+          done < <(find release-assets -type f \( -name 'Auto-Agent-Client-*.dmg' -o -name 'Auto-Agent-Client-*.msi' -o -name 'Auto-Agent-Client-*.AppImage' \) -print0)
+          gcloud compute ssh "${GCP_VM}" --project="${GCP_PROJECT}" --zone="${GCP_ZONE}" \
+            --command="cd /opt/auto-agent/deploy && sudo docker compose restart caddy"
