@@ -1,0 +1,42 @@
+{
+  "postMessage_success": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "ok": true,
+      "channel": "C123",
+      "ts": "1234567890.123456",
+      "message": {
+        "text": "hello",
+        "user": "U123",
+        "ts": "1234567890.123456"
+      }
+    }
+  },
+  "postMessage_channel_not_found": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "ok": false,
+      "error": "channel_not_found"
+    }
+  },
+  "conversations_list_page1": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "ok": true,
+      "channels": [{"id": "C1", "name": "general"}, {"id": "C2", "name": "ops"}],
+      "response_metadata": {"next_cursor": "cursor-page-2"}
+    }
+  },
+  "conversations_list_page2": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "ok": true,
+      "channels": [{"id": "C3", "name": "random"}],
+      "response_metadata": {"next_cursor": ""}
+    }
+  }
+}

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>reCAPTCHA Registration — Secure Registration</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --card: #ffffff;
+      --border: #e4e7ed;
+      --text: #303133;
+      --muted: #909399;
+      --accent: #409eff;
+      --accent-hover: #66b1ff;
+      --success: #67c23a;
+      --success-bg: rgba(103, 194, 58, 0.12);
+      --danger: #f56c6c;
+      --radius: 8px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px 24px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .header p {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .captcha-section {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      min-height: 78px;
+    }
+
+    .field { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      margin-top: 4px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    button[type="submit"]:hover:not(:disabled) { background: var(--accent-hover); }
+
+    button[type="submit"]:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    #error-panel {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(245, 108, 108, 0.1);
+      border: 1px solid rgba(245, 108, 108, 0.35);
+      border-radius: 6px;
+      color: var(--danger);
+      font-size: 0.85rem;
+    }
+
+    #error-panel.visible { display: block; }
+
+    #success-panel {
+      display: none;
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--success-bg);
+      border: 1px solid rgba(103, 194, 58, 0.35);
+      border-radius: var(--radius);
+    }
+
+    #success-panel.visible { display: block; }
+
+    #success-panel h2 {
+      color: var(--success);
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    #success-panel dl {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 6px 10px;
+      font-size: 0.85rem;
+    }
+
+    #success-panel dt { color: var(--muted); font-weight: 600; }
+    #success-panel dd { color: var(--text); word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>Secure Registration</h1>
+      <p>Complete reCAPTCHA verification to continue</p>
+    </div>
+
+    <div class="captcha-section" id="captcha-section">
+      <div id="recaptcha-widget"></div>
+    </div>
+
+    <form id="recaptcha-form" novalidate>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="new-password" />
+      </div>
+
+      <div class="field">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" name="name" placeholder="Jane Doe" required />
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="jane@example.com" required />
+      </div>
+
+      <div class="field">
+        <label for="phone">Phone</label>
+        <input type="tel" id="phone" name="phone" placeholder="+1 555 0100" required />
+      </div>
+
+      <button type="submit" id="submit-btn" disabled>Submit Registration</button>
+    </form>
+
+    <div id="error-panel" role="alert"></div>
+
+    <div id="success-panel" role="status" aria-live="polite">
+      <h2>Registration Successful</h2>
+      <dl id="success-values"></dl>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var VERIFY_URL = "http://127.0.0.1:8001/api/test/recaptcha-verify";
+      var CONFIG_URL = "http://127.0.0.1:8001/api/test/recaptcha-config";
+
+      var submitBtn = document.getElementById("submit-btn");
+      var form = document.getElementById("recaptcha-form");
+      var errorPanel = document.getElementById("error-panel");
+      var successPanel = document.getElementById("success-panel");
+      var successValues = document.getElementById("success-values");
+      var widgetRendered = false;
+
+      function maskPassword(value) {
+        if (!value) return "(empty)";
+        if (value.length <= 2) return "*".repeat(value.length);
+        return value[0] + "*".repeat(value.length - 2) + value[value.length - 1];
+      }
+
+      function showError(message) {
+        errorPanel.textContent = message;
+        errorPanel.classList.add("visible");
+      }
+
+      function hideError() {
+        errorPanel.textContent = "";
+        errorPanel.classList.remove("visible");
+      }
+
+      window.onRecaptchaLoad = function () {
+        if (widgetRendered || typeof grecaptcha === "undefined") return;
+        fetch(CONFIG_URL)
+          .then(function (r) { return r.json(); })
+          .then(function (cfg) {
+            grecaptcha.render("recaptcha-widget", {
+              sitekey: cfg.site_key,
+              callback: function () { hideError(); },
+              "expired-callback": function () {
+                showError("reCAPTCHA expired — please verify again.");
+              },
+            });
+            widgetRendered = true;
+            submitBtn.disabled = false;
+          })
+          .catch(function (err) {
+            showError("Could not load reCAPTCHA config: " + (err.message || "unknown"));
+          });
+      };
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        hideError();
+
+        if (!widgetRendered) {
+          showError("reCAPTCHA widget is not ready yet.");
+          return;
+        }
+
+        var token = grecaptcha.getResponse();
+        if (!token) {
+          showError("Please complete the reCAPTCHA checkbox.");
+          return;
+        }
+
+        var body = new FormData(form);
+        body.set("g-recaptcha-response", token);
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Verifying…";
+
+        fetch(VERIFY_URL, { method: "POST", body: body })
+          .then(function (resp) {
+            return resp.json().then(function (data) {
+              return { ok: resp.ok, data: data };
+            });
+          })
+          .then(function (result) {
+            if (!result.ok || !result.data.success) {
+              var msg = (result.data && result.data.error) || "Server verification failed.";
+              showError(msg);
+              grecaptcha.reset();
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Submit Registration";
+              return;
+            }
+
+            var password = document.getElementById("password").value;
+            var name = document.getElementById("name").value;
+            var email = document.getElementById("email").value;
+            var phone = document.getElementById("phone").value;
+
+            successValues.innerHTML = [
+              ["Password", maskPassword(password)],
+              ["Name", name || "(empty)"],
+              ["Email", email || "(empty)"],
+              ["Phone", phone || "(empty)"],
+            ].map(function (row) {
+              return "<dt>" + row[0] + "</dt><dd>" + row[1] + "</dd>";
+            }).join("");
+
+            form.style.display = "none";
+            document.getElementById("captcha-section").style.display = "none";
+            successPanel.classList.add("visible");
+          })
+          .catch(function (err) {
+            showError("Network error: " + (err && err.message ? err.message : "request failed"));
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Submit Registration";
+          });
+      });
+    })();
+  </script>
+  <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
+</body>
+</html>

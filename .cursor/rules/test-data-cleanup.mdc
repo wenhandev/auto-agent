@@ -1,0 +1,69 @@
+---
+description: 测试创建的数据必须在测试结束后删除；编写/修改测试时遵守清理约定
+globs: backend/tests/**/*.py,**/tests/**/*.py,**/*.test.ts,**/*.spec.ts
+alwaysApply: false
+---
+
+# 测试数据用完即删
+
+编写或修改测试时，**凡是在测试过程中创建的数据，必须在测试结束（pass 或 fail）后删除或重置**，避免污染本地 DB、磁盘和进程内全局状态。
+
+## 必须清理的内容
+
+- **数据库行**（`Session` 插入的 workflow / run / user / worker / api_key 等）
+- **API 创建的资源**（`POST` 创建的 workflow、session、credential 等 → 对应 `DELETE` 或 revoke）
+- **文件与目录**（staging uploads、`data/run_inputs/`、临时 artifact）
+- **进程内单例**（dispatcher、worker_hub、rate limiter 等 → 调用已有 `reset_*_for_tests()`）
+
+## 推荐模式
+
+### 1. `yield` fixture（首选）
+
+```python
+@pytest.fixture
+def temp_workflow(client: TestClient):
+    res = client.post("/api/workflows", json={"name": f"test-{uuid.uuid4().hex[:8]}"})
+    wf_id = res.json()["id"]
+    yield wf_id
+    client.delete(f"/api/workflows/{wf_id}")
+```
+
+### 2. `autouse` + teardown（模块级状态）
+
+参考 `backend/tests/test_workers.py`：在 `yield` **之后**重置 hub / dispatcher，并删除本用例插入的行。
+
+```python
+@pytest.fixture(autouse=True)
+def _clean():
+    # setup
+    yield
+    run_svc.reset_dispatcher_for_tests()
+    worker_hub.reset_for_tests()
+```
+
+### 3. 临时文件
+
+```python
+with tempfile.TemporaryDirectory() as tmp:
+    path = Path(tmp) / "file.csv"
+    ...  # 退出 with 自动删除
+```
+
+### 4. 唯一命名 + 仍要删除
+
+创建资源时用 `uuid` 或 `test-{uuid}` 前缀避免并行冲突，**不能**以此为由跳过 teardown。
+
+## 禁止
+
+- 测试里 `POST /api/...` 创建资源却从不 `DELETE` / revoke
+- 只清理 pass 路径、失败时泄漏（清理写在 `finally` 或 fixture teardown，不要只写在 test 末尾且无 try/finally）
+- 往仓库目录写持久文件且不删（如 `demo/`、`backend/data/` 下留测试垃圾）
+- 依赖「下次测试会 init_db」代替显式清理（集成测试仍须删自己创建的行）
+
+## 新增测试自检
+
+写完测试后确认：
+
+1. 列出了本测试创建的所有资源
+2. 每条资源在 teardown 中有对应删除/reset
+3. 单独跑该文件两次结果一致：`pytest path/to/test_foo.py -q` × 2

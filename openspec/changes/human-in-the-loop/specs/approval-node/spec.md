@@ -14,7 +14,7 @@ The notification hook `services.notifications.emit("approval_requested", payload
 - **As an operator**, I want a rejected run to be visually distinct from a failed run in the run history, so I can tell deliberate stops from crashes.
 - **As an operator**, I want a backend restart during a pending approval to fail the run with an obvious reason rather than leave the run in a confused state.
 
-## Functional requirements
+## ADDED Requirements
 
 ### Requirement: `approval` Node Type And Params Shape
 
@@ -100,7 +100,7 @@ The abort flag SHALL be checked at the await edges; an abort during the wait SHA
 
 ### Requirement: Approve Resumes Traversal
 
-On resolution with `decision="approve"`:
+On resolution with `decision="approve"`, the executor SHALL:
 
 - the executor SHALL set `context[node.id] = {"decision":"approve","inputs":<resolved.inputs>}`;
 - the executor SHALL emit `node_approved` (informational; payload `{decision, inputs}`) followed by `node_completed` whose `output = context[node.id]` and `attempt = 1`;
@@ -113,7 +113,7 @@ On resolution with `decision="approve"`:
 
 ### Requirement: Reject Terminates Run As Rejected
 
-On resolution with `decision="reject"`:
+On resolution with `decision="reject"`, the executor SHALL:
 
 - the executor SHALL emit `node_rejected` with `output={"decision":"reject","inputs":<resolved.inputs>}`;
 - the executor SHALL transition the parent run to `status="rejected"`, set `finished_at = now()`, and emit `run_rejected`;

@@ -6,14 +6,23 @@ import {
   Clock,
   Copy,
   KeyRound,
+  Pencil,
   Plus,
+  Radio,
   RefreshCw,
   Trash2,
   Webhook,
 } from "lucide-react";
 
+import { IntegrationAppLabel } from "@/components/IntegrationAppLabel";
 import { apiClient, ApiError } from "@/api-platform";
-import type { TriggerCreate, TriggerOut, TriggerType } from "@/types-platform";
+import type {
+  IntegrationDescriptor,
+  IntegrationTriggerSpec,
+  TriggerCreate,
+  TriggerOut,
+  TriggerType,
+} from "@/types-platform";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,10 +88,32 @@ interface NewTriggerForm {
   type: TriggerType;
   cron: string;
   path: string;
+  pollApp: string;
+  pollResource: string;
+  pollOperation: string;
+  pollCredential: string;
+  pollDedupPath: string;
+  pollInterval: string;
+  appName: string;
+  appTrigger: string;
+  appCredential: string;
 }
 
 function emptyForm(): NewTriggerForm {
-  return { type: "cron", cron: "", path: "" };
+  return {
+    type: "cron",
+    cron: "",
+    path: "",
+    pollApp: "",
+    pollResource: "",
+    pollOperation: "",
+    pollCredential: "",
+    pollDedupPath: "id",
+    pollInterval: "60",
+    appName: "",
+    appTrigger: "",
+    appCredential: "",
+  };
 }
 
 export function WorkflowTriggersPanel({ workflowId }: Props) {
@@ -102,7 +133,37 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
     enabled: !!workflowId,
   });
 
+  const integrationsQuery = useQuery({
+    queryKey: ["integrations", "catalogue"],
+    queryFn: () => apiClient.integrations.list(),
+  });
+
+  const credentialsQuery = useQuery({
+    queryKey: ["workflows", "credentials", workflowId],
+    queryFn: () => apiClient.workflows.listCredentials(workflowId),
+    enabled: !!workflowId,
+  });
+
   const triggers = triggersQuery.data ?? [];
+  const integrations = integrationsQuery.data ?? [];
+  const credentialNames = (credentialsQuery.data ?? []).map((c) => c.name);
+
+  const pollApps = integrations.filter((d) =>
+    (d.triggers ?? []).some((tr) => tr.kind === "poll"),
+  );
+  const appWebhookApps = integrations.filter((d) =>
+    (d.triggers ?? []).some((tr) => tr.kind === "webhook"),
+  );
+
+  function pollTriggersForApp(app: string): IntegrationTriggerSpec[] {
+    const desc = integrations.find((d) => d.app === app);
+    return (desc?.triggers ?? []).filter((tr) => tr.kind === "poll");
+  }
+
+  function appTriggersForApp(app: string): IntegrationTriggerSpec[] {
+    const desc = integrations.find((d) => d.app === app);
+    return (desc?.triggers ?? []).filter((tr) => tr.kind === "webhook");
+  }
 
   const createMut = useMutation({
     mutationFn: (body: TriggerCreate) =>
@@ -177,7 +238,21 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
 
   const canSubmit = useMemo(() => {
     if (form.type === "cron") return isLikelyValidCron(form.cron);
-    return form.path === "" || /^[a-z0-9-]{3,64}$/.test(form.path);
+    if (form.type === "webhook") {
+      return form.path === "" || /^[a-z0-9-]{3,64}$/.test(form.path);
+    }
+    if (form.type === "poll") {
+      return (
+        !!form.pollApp &&
+        !!form.pollResource &&
+        !!form.pollOperation &&
+        !!form.pollCredential
+      );
+    }
+    if (form.type === "app") {
+      return !!form.appName && !!form.appTrigger && !!form.appCredential;
+    }
+    return false;
   }, [form]);
 
   function onCopy(text: string, key: string): void {
@@ -192,12 +267,33 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
     setErrorMsg(null);
     if (form.type === "cron") {
       createMut.mutate({ type: "cron", schedule_or_path: form.cron.trim() });
-    } else {
+      return;
+    }
+    if (form.type === "webhook") {
       createMut.mutate({
         type: "webhook",
         schedule_or_path: form.path.trim() || null,
       });
+      return;
     }
+    if (form.type === "poll") {
+      createMut.mutate({
+        type: "poll",
+        poll_app: form.pollApp,
+        poll_resource: form.pollResource,
+        poll_operation: form.pollOperation,
+        poll_credential: form.pollCredential,
+        poll_dedup_path: form.pollDedupPath.trim() || "id",
+        min_poll_interval_s: Number(form.pollInterval) || 60,
+      });
+      return;
+    }
+    createMut.mutate({
+      type: "app",
+      app_name: form.appName,
+      app_trigger: form.appTrigger,
+      app_credential: form.appCredential,
+    });
   }
 
   return (
@@ -266,6 +362,10 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
                   <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 ) : trig.type === "webhook" ? (
                   <Webhook className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : trig.type === "poll" ? (
+                  <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : trig.type === "app" ? (
+                  <Radio className="h-3.5 w-3.5 text-muted-foreground" />
                 ) : (
                   <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
                 )}
@@ -273,7 +373,18 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
                   className="flex-1 truncate font-mono text-xs text-foreground"
                   title={trig.schedule_or_path}
                 >
-                  {trig.schedule_or_path}
+                  {trig.type === "poll"
+                    ? t("triggers.pollSummary", {
+                        app: trig.poll_app ?? "?",
+                        resource: trig.poll_resource ?? "?",
+                        operation: trig.poll_operation ?? "?",
+                      })
+                    : trig.type === "app"
+                      ? t("triggers.appSummary", {
+                          app: trig.app_name ?? "?",
+                          trigger: trig.app_trigger ?? "?",
+                        })
+                      : trig.schedule_or_path}
                 </span>
                 <Switch
                   checked={trig.enabled}
@@ -319,6 +430,50 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
                   }
                 />
               )}
+
+              {trig.type === "poll" && trig.poll_app && (
+                <div className="rounded-md bg-muted/30 p-2 text-[11px] text-muted-foreground">
+                  <div className="mb-1">
+                    <IntegrationAppLabel app={trig.poll_app} />
+                  </div>
+                  <div>
+                    {t("triggers.pollCredentialLabel")}:{" "}
+                    <span className="font-mono text-foreground">
+                      {trig.poll_credential}
+                    </span>
+                  </div>
+                  <div>
+                    {t("triggers.pollIntervalLabel")}:{" "}
+                    {trig.min_poll_interval_s ?? 60}s
+                  </div>
+                </div>
+              )}
+
+              {trig.type === "app" && (
+                <div className="rounded-md bg-muted/30 p-2 text-[11px] text-muted-foreground">
+                  {trig.app_name && (
+                    <div className="mb-1">
+                      <IntegrationAppLabel app={trig.app_name} />
+                    </div>
+                  )}
+                  {trig.app_callback_url && (
+                    <div className="flex items-center gap-2">
+                      <span className="shrink-0">
+                        {t("triggers.appCallbackUrlLabel")}:
+                      </span>
+                      <code className="truncate font-mono text-[10px] text-foreground">
+                        {trig.app_callback_url}
+                      </code>
+                    </div>
+                  )}
+                  {trig.subscription_status && (
+                    <div>
+                      {t("triggers.subscriptionStatusLabel")}:{" "}
+                      {trig.subscription_status}
+                    </div>
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -346,6 +501,8 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
                   <SelectItem value="webhook">
                     {t("triggers.typeWebhook")}
                   </SelectItem>
+                  <SelectItem value="poll">{t("triggers.typePoll")}</SelectItem>
+                  <SelectItem value="app">{t("triggers.typeApp")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -388,6 +545,26 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
                 </p>
               </div>
             )}
+
+            {form.type === "poll" && (
+              <PollTriggerFields
+                form={form}
+                setForm={setForm}
+                pollApps={pollApps}
+                credentialNames={credentialNames}
+                pollTriggersForApp={pollTriggersForApp}
+              />
+            )}
+
+            {form.type === "app" && (
+              <AppTriggerFields
+                form={form}
+                setForm={setForm}
+                appWebhookApps={appWebhookApps}
+                credentialNames={credentialNames}
+                appTriggersForApp={appTriggersForApp}
+              />
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -406,6 +583,203 @@ export function WorkflowTriggersPanel({ workflowId }: Props) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function PollTriggerFields({
+  form,
+  setForm,
+  pollApps,
+  credentialNames,
+  pollTriggersForApp,
+}: {
+  form: NewTriggerForm;
+  setForm: (next: NewTriggerForm) => void;
+  pollApps: IntegrationDescriptor[];
+  credentialNames: string[];
+  pollTriggersForApp: (app: string) => IntegrationTriggerSpec[];
+}) {
+  const { t } = useTranslation();
+  const triggers = form.pollApp ? pollTriggersForApp(form.pollApp) : [];
+  const selected = triggers.find((tr) => tr.name === form.pollOperation);
+
+  return (
+    <>
+      <div className="flex flex-col gap-1.5">
+        <Label>{t("triggers.pollAppLabel")}</Label>
+        <Select
+          value={form.pollApp}
+          onValueChange={(v) =>
+            setForm({
+              ...form,
+              pollApp: v,
+              pollResource: "",
+              pollOperation: "",
+              pollDedupPath: "id",
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="slack" />
+          </SelectTrigger>
+          <SelectContent>
+            {pollApps.map((d) => (
+              <SelectItem key={d.app} value={d.app}>
+                <IntegrationAppLabel app={d.app} />
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>{t("triggers.pollOperationLabel")}</Label>
+        <Select
+          value={form.pollOperation}
+          onValueChange={(v) => {
+            const tr = triggers.find((item) => item.name === v);
+            setForm({
+              ...form,
+              pollOperation: v,
+              pollResource: tr?.resource ?? form.pollResource,
+              pollDedupPath: tr?.dedup_path ?? form.pollDedupPath,
+            });
+          }}
+          disabled={!form.pollApp}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {triggers.map((tr) => (
+              <SelectItem key={tr.name} value={tr.name}>
+                {tr.label ?? tr.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {selected?.resource && (
+        <p className="text-[11px] text-muted-foreground">
+          {t("triggers.pollResourceLabel")}: {selected.resource}
+        </p>
+      )}
+      <div className="flex flex-col gap-1.5">
+        <Label>{t("triggers.pollCredentialLabel")}</Label>
+        <Select
+          value={form.pollCredential}
+          onValueChange={(v) => setForm({ ...form, pollCredential: v })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {credentialNames.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="poll-dedup">{t("triggers.pollDedupPathLabel")}</Label>
+        <Input
+          id="poll-dedup"
+          value={form.pollDedupPath}
+          onChange={(e) => setForm({ ...form, pollDedupPath: e.target.value })}
+          className="font-mono"
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="poll-interval">{t("triggers.pollIntervalLabel")}</Label>
+        <Input
+          id="poll-interval"
+          type="number"
+          min={60}
+          value={form.pollInterval}
+          onChange={(e) => setForm({ ...form, pollInterval: e.target.value })}
+        />
+      </div>
+    </>
+  );
+}
+
+function AppTriggerFields({
+  form,
+  setForm,
+  appWebhookApps,
+  credentialNames,
+  appTriggersForApp,
+}: {
+  form: NewTriggerForm;
+  setForm: (next: NewTriggerForm) => void;
+  appWebhookApps: IntegrationDescriptor[];
+  credentialNames: string[];
+  appTriggersForApp: (app: string) => IntegrationTriggerSpec[];
+}) {
+  const { t } = useTranslation();
+  const triggers = form.appName ? appTriggersForApp(form.appName) : [];
+
+  return (
+    <>
+      <div className="flex flex-col gap-1.5">
+        <Label>{t("triggers.appNameLabel")}</Label>
+        <Select
+          value={form.appName}
+          onValueChange={(v) =>
+            setForm({ ...form, appName: v, appTrigger: "" })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {appWebhookApps.map((d) => (
+              <SelectItem key={d.app} value={d.app}>
+                <IntegrationAppLabel app={d.app} />
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>{t("triggers.appTriggerLabel")}</Label>
+        <Select
+          value={form.appTrigger}
+          onValueChange={(v) => setForm({ ...form, appTrigger: v })}
+          disabled={!form.appName}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {triggers.map((tr) => (
+              <SelectItem key={tr.name} value={tr.name}>
+                {tr.label ?? tr.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>{t("triggers.appCredentialLabel")}</Label>
+        <Select
+          value={form.appCredential}
+          onValueChange={(v) => setForm({ ...form, appCredential: v })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {credentialNames.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </>
   );
 }
 

@@ -24,8 +24,9 @@ except Exception:
     pass
 
 PORT = os.environ.get("AUTO_AGENT_PORT", "8000")
-BASE = f"http://localhost:{PORT}"
-WS = f"ws://localhost:{PORT}/ws/run"
+HOST = os.environ.get("AUTO_AGENT_HOST", "127.0.0.1")
+BASE = f"http://{HOST}:{PORT}"
+WS = f"ws://{HOST}:{PORT}/ws/run"
 
 
 def fetch_sample() -> dict:

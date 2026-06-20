@@ -1,0 +1,17 @@
+**/.git
+**/.venv
+**/node_modules
+**/target
+**/__pycache__
+**/.pytest_cache
+**/.env
+client/
+worker/
+openspec/
+.github/
+backend/.pytest_cache
+backend/data/
+backend/auto_agent.db
+backend/static/portal
+*.md
+!backend/README.md

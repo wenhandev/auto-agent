@@ -1,0 +1,20 @@
+
+> auto-agent-desktop@0.1.0 tauri:dev
+> tauri dev
+
+     Running BeforeDevCommand (`npm run dev`)
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching /Users/wenhanjiang/Desktop/auto_agent/desktop/src-tauri for changes...
+
+> auto-agent-desktop@0.1.0 dev
+> vite
+
+[1m[92m    Blocking[0m waiting for file lock on build directory
+error when starting dev server:
+Error: Port 1420 is already in use
+    at httpServerStart (file:///Users/wenhanjiang/Desktop/auto_agent/desktop/node_modules/vite/dist/node/chunks/node.js:10721:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///Users/wenhanjiang/Desktop/auto_agent/desktop/node_modules/vite/dist/node/chunks/node.js:26503:30)
+    at async Object.listen (file:///Users/wenhanjiang/Desktop/auto_agent/desktop/node_modules/vite/dist/node/chunks/node.js:26320:4)
+    at async CAC.<anonymous> (file:///Users/wenhanjiang/Desktop/auto_agent/desktop/node_modules/vite/dist/node/cli.js:721:3)
+       Error The "beforeDevCommand" terminated with a non-zero status code.

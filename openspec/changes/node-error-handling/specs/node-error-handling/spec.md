@@ -12,7 +12,7 @@ The default values are chosen to preserve today's behaviour exactly: `retry = nu
 - **As an operator**, I want the canvas to visually distinguish error-path edges so a glance tells me where a workflow's recovery goes.
 - **As the editor LLM**, I want a small, documented schema fragment so I can add retries on the user's request without learning a templating language.
 
-## Functional requirements
+## ADDED Requirements
 
 ### Requirement: Per-Node Retry Policy
 

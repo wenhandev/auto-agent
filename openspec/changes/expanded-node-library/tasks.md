@@ -1,52 +1,53 @@
 ## 1. Shared contract (parent worker)
 
-- [ ] 1.1 `[shared-contract]` Extend `backend/app/schemas.py`:
+- [x] 1.1 `[shared-contract]` Extend `backend/app/schemas.py`:
   - add eight literals to `NodeType`: `"http_request"`, `"read_file"`, `"write_file"`, `"send_email"`, `"parse_json"`, `"parse_csv"`, `"foreach"`, `"subworkflow"`;
   - add per-type params models: `HttpRequestParams`, `ReadFileParams`, `WriteFileParams`, `SendEmailParams`, `ParseJsonParams`, `ParseCsvParams`, `ForeachParams`, `SubworkflowParams`;
   - extend `ConditionParams` with optional `predicate: ConditionPredicate | None`; introduce `ConditionPredicate` with the operator literal listed in design Decision 8;
   - register all per-type params models in the discriminator so `Node.params` deserialises correctly per `type`.
-- [ ] 1.2 `[shared-contract]` Extend `backend/app/db/models.py::Run`:
+- [x] 1.2 `[shared-contract]` Extend `backend/app/db/models.py::Run`:
   - add `parent_run_id: Optional[str] = Field(default=None, foreign_key="run.id", index=True)`.
-- [ ] 1.3 `[shared-contract]` Author `backend/app/db/migrations.py::add_parent_run_id_on_first_run()` — `ALTER TABLE run ADD COLUMN parent_run_id TEXT NULL` (no-op if the column exists, detected via `PRAGMA table_info(run)`); writes marker `backend/.parent_run_id_added`. Wire into `lifespan` after `init_db()` and the other backfills.
-- [ ] 1.4 `[shared-contract]` Author `backend/app/tools/sandbox.py` — `WORKSPACE_DIR = (Path("backend/data/workflow_files")).resolve()`, `workflow_dir(workflow_id) -> Path` (lazy-creates the per-workflow subdir per design Decision 2), `resolve_sandbox_path(user_path, *, workflow_id) -> Path`, `SandboxViolation(Exception)`. Lifespan helper creates the top-level `WORKSPACE_DIR` if missing; per-workflow subdirs are created lazily on first file-action use.
+- [x] 1.3 `[shared-contract]` Author `backend/app/db/migrations.py::add_parent_run_id_on_first_run()` — `ALTER TABLE run ADD COLUMN parent_run_id TEXT NULL` (no-op if the column exists, detected via `PRAGMA table_info(run)`); writes marker `backend/.parent_run_id_added`. Wire into `lifespan` after `init_db()` and the other backfills.
+- [x] 1.4 `[shared-contract]` Author `backend/app/tools/sandbox.py` — `WORKSPACE_DIR = (Path("backend/data/workflow_files")).resolve()`, `workflow_dir(workflow_id) -> Path` (lazy-creates the per-workflow subdir per design Decision 2), `resolve_sandbox_path(user_path, *, workflow_id) -> Path`, `SandboxViolation(Exception)`. Lifespan helper creates the top-level `WORKSPACE_DIR` if missing; per-workflow subdirs are created lazily on first file-action use.
 - [ ] 1.5 `[shared-contract]` Extend `backend/app/schemas_api.py`:
   - event-type literal grows by four: `"foreach_iteration_started"`, `"foreach_iteration_completed"`, `"subworkflow_started"`, `"subworkflow_completed"`;
   - per-event payload models;
   - `RunOut` / `RunListItem` include `parent_run_id: Optional[str]`;
   - `RunOut` includes `child_runs: list[RunSummary]`;
   - `GET /api/runs` accepts `?include_children: bool = False`.
-- [ ] 1.6 `[shared-contract]` Mirror TS types in `frontend/src/types.ts` (new `NodeType` literals + per-type params models on `Node.params`) and `frontend/src/types-platform.ts` (new event-type literals, `RunOut.child_runs`, `parent_run_id`).
-- [ ] 1.7 `[shared-contract]` Add `httpx` to `backend/pyproject.toml` (pin a current version). Append `backend/data/workflow_files/`, `.parent_run_id_added` to `.gitignore`.
+- [x] 1.6 `[shared-contract]` Mirror TS types in `frontend/src/types.ts` (new `NodeType` literals + per-type params models on `Node.params`) and `frontend/src/types-platform.ts` (new event-type literals, `RunOut.child_runs`, `parent_run_id`).
+- [x] 1.7 `[shared-contract]` Add `httpx` to `backend/pyproject.toml` (pin a current version). Append `backend/data/workflow_files/`, `.parent_run_id_added` to `.gitignore`.
 - [ ] 1.8 `[shared-contract]` Smoke-check: `python -c "from app.schemas import Node, NodeType, HttpRequestParams, ForeachParams; n = Node(id='x', type='http_request', label='get', params={'method':'GET','url':'https://x'}); assert isinstance(n.params, HttpRequestParams); print('ok')"` and `cd frontend && npx tsc --noEmit` pass.
 
 ## 2. Backend non-browser nodes (Sibling A — `[backend-nodes]`)
 
-- [ ] 2.1 Add `app/tools/actions_http.py::http_request(params: HttpRequestParams) -> dict` — uses `httpx.AsyncClient` with the configured timeout; populates `output = {status, headers, json, text, elapsed_ms}` per design Decision 3; truncates `text` at 1 MB.
-- [ ] 2.2 Add `app/tools/actions_files.py::read_file(params, *, workflow_id) -> dict` and `write_file(params, *, workflow_id) -> dict`:
+- [x] 2.1 Add `app/tools/actions_http.py::http_request(params: HttpRequestParams) -> dict` — uses `httpx.AsyncClient` with the configured timeout; populates `output = {status, headers, json, text, elapsed_ms}` per design Decision 3; truncates `text` at 1 MB.
+- [x] 2.2 Add `app/tools/actions_files.py::read_file(params, *, workflow_id) -> dict` and `write_file(params, *, workflow_id) -> dict`:
   - both call `sandbox.resolve_sandbox_path(path, workflow_id=workflow_id)` first; if `workflow_id is None` (ephemeral `/ws/run` path), raise `SandboxViolation("file actions require a persisted workflow")`;
   - `read_file.output = {contents: str, byte_count: int, path: str}` (where `path` is the workflow-relative path the user provided, not the absolute resolved path);
   - `write_file.output = {path: str, byte_count: int}`;
   - `read_file` enforces `max_bytes`; `write_file` creates parent dirs WITHIN the per-workflow sandbox if missing.
-- [ ] 2.3 Add `app/tools/actions_email.py::send_email(params, session, *, workflow_id) -> dict`:
+- [x] 2.3 Add `app/tools/actions_email.py::send_email(params, session, *, workflow_id) -> dict`:
   - looks up the credential by name (`smtp_credential`); the credential fields `{host, port, username, password, use_tls}` are loaded via the existing credential resolver (so per-workflow link enforcement applies);
   - sends via `aiosmtplib` (add as a dependency in §1.7);
   - attachments resolved via `sandbox.resolve_sandbox_path(att, workflow_id=workflow_id)` so attachments share the per-workflow sandbox AND fail with `SandboxViolation` when `workflow_id is None`;
   - returns `{message_id, accepted, rejected}`.
-- [ ] 2.4 Add `app/tools/actions_parse.py::parse_json(params) -> dict` and `parse_csv(params) -> dict`:
+  - **Note:** stub only — raises `SendEmailNotConfiguredError` until aiosmtplib wired.
+- [x] 2.4 Add `app/tools/actions_parse.py::parse_json(params) -> dict` and `parse_csv(params) -> dict`:
   - `parse_json.output = {parsed: Any}`;
   - `parse_csv.output = {rows: list[dict|list], header: list[str]|null}`;
   - both raise `ValueError` on malformed input (caught by the executor as `node_failed`).
-- [ ] 2.5 Wire the five new action functions into the executor's dispatch table. The dispatch site SHALL pass `workflow_id` (the parent run's `Run.workflow_id`, or `None` for the legacy ephemeral path) into `read_file`, `write_file`, and `send_email`. HTTP / parse nodes do NOT receive `workflow_id` because they do not touch the sandbox.
-- [ ] 2.6 Add unit tests:
+- [x] 2.5 Wire the five new action functions into the executor's dispatch table. The dispatch site SHALL pass `workflow_id` (the parent run's `Run.workflow_id`, or `None` for the legacy ephemeral path) into `read_file`, `write_file`, and `send_email`. HTTP / parse nodes do NOT receive `workflow_id` because they do not touch the sandbox.
+- [x] 2.6 Add unit tests:
   - `backend/tests/test_actions_http.py` — happy path GET against an `httpx.MockTransport`, 4xx returns completion (not failure), network error raises;
   - `backend/tests/test_actions_files.py` — happy read / write within a per-workflow sandbox, `..` rejected, absolute path rejected, `max_bytes` enforced, `workflow_id=None` raises `SandboxViolation("file actions require a persisted workflow")`, two workflows with the same relative filename (`t.txt`) write to and read from DIFFERENT files (no cross-workflow leakage), per-workflow dir is lazily created on first write;
   - `backend/tests/test_actions_email.py` — credentials resolved correctly, attachments sandboxed per-workflow, attachment outside per-workflow dir rejected, `aiosmtplib` mocked;
   - `backend/tests/test_actions_parse.py` — JSON parse round-trip, CSV with / without header, malformed input raises.
-- [ ] 2.7 Smoke-check: `pytest backend/tests/test_actions_http.py backend/tests/test_actions_files.py backend/tests/test_actions_email.py backend/tests/test_actions_parse.py -v` passes.
+- [x] 2.7 Smoke-check: `pytest backend/tests/test_actions_http.py backend/tests/test_actions_files.py backend/tests/test_actions_email.py backend/tests/test_actions_parse.py -v` passes.
 
 ## 3. Backend composite flow nodes (Sibling B — `[backend-flow]`)
 
-- [ ] 3.1 Add `app/tools/actions_foreach.py::foreach(params, context, session, *, emit) -> dict`:
+- [x] 3.1 Add `app/tools/actions_foreach.py::foreach(params, context, session, *, emit) -> dict`:
   - iterates `params.items` (resolved already by the variable-interpolation pass);
   - per item: builds a child `context` containing `{item, index}` exposed under `_iter` (so tokens read `{{nodes.<foreach_id>.output.item}}` resolved at the parent level via a small remapping shim — see design Decision 6);
   - runs `params.body_workflow` via a recursive call into the executor's `run_workflow` with the child context;
@@ -54,30 +55,30 @@
   - respects `max_iterations` cap;
   - on iteration failure, consults the foreach node's `on_error` per `node-error-handling` (if installed) OR falls back to today's "fail_run" default;
   - returns `{item_count, succeeded, failed, results}`.
-- [ ] 3.2 Add `app/services/sub_runs.py::run_subworkflow(parent_run_id, workflow_id, version_id, input) -> SubworkflowResult`:
+- [x] 3.2 Add `app/services/sub_runs.py::run_subworkflow(parent_run_id, workflow_id, version_id, input) -> SubworkflowResult`:
   - creates a `Run` row with `parent_run_id` set;
   - inserts an `_input` synthetic context entry (so `{{nodes._input.output.<key>}}` resolves in the child);
   - recursively dispatches into the executor's `run_workflow`;
   - returns `{child_run_id, status, final_output}`;
   - enforces a recursion-depth cap (5) — checked via a counter on the current asyncio task using `contextvars`.
-- [ ] 3.3 Add `app/tools/actions_subworkflow.py::subworkflow(params, ...) -> dict` thin wrapper that calls `sub_runs.run_subworkflow(...)` and emits the two new events `subworkflow_started` and `subworkflow_completed`.
-- [ ] 3.4 Extend `app/executor.py::condition` evaluator with the typed predicate per design Decision 8:
+- [x] 3.3 Add `app/tools/actions_subworkflow.py::subworkflow(params, ...) -> dict` thin wrapper that calls `sub_runs.run_subworkflow(...)` and emits the two new events `subworkflow_started` and `subworkflow_completed`.
+- [x] 3.4 Extend `app/executor.py::condition` evaluator with the typed predicate per design Decision 8:
   - when `params.predicate` is present, evaluate via a small typed evaluator (no `eval`);
   - emit `condition_evaluated` payload (within the existing `node_completed.output`) with `{predicate, result}`;
   - when `params.predicate` is absent, fall back to today's behaviour (`when=="true"` edge).
-- [ ] 3.5 Wire the three new flow node actions into the executor dispatch table. Update workflow validation to reject:
+- [x] 3.5 Wire the three new flow node actions into the executor dispatch table. Update workflow validation to reject:
   - nested `foreach` inside another `foreach`'s `body_workflow`;
   - `subworkflow.workflow_id` referencing the workflow itself at the same `version_id` (self-recursion at the same version);
   - `subworkflow` recursion depth > 5 at runtime.
-- [ ] 3.6 Modify `app/routers/runs.py`:
+- [x] 3.6 Modify `app/routers/runs.py`:
   - `GET /api/runs` filters `parent_run_id IS NULL` by default; `?include_children=true` returns the unfiltered list;
   - `GET /api/runs/{id}` populates `child_runs` from `SELECT … WHERE parent_run_id = id`.
-- [ ] 3.6a Modify `app/routers/workflows.py::delete_workflow` — after the cascade deletes (versions, sessions, runs, triggers, credential links), best-effort `shutil.rmtree(sandbox.workflow_dir(id), ignore_errors=True)` to remove the per-workflow sandbox dir. Failures SHALL be logged at `WARNING` but SHALL NOT block the delete response.
-- [ ] 3.7 Add unit tests:
+- [x] 3.6a Modify `app/routers/workflows.py::delete_workflow` — after the cascade deletes (versions, sessions, runs, triggers, credential links), best-effort `shutil.rmtree(sandbox.workflow_dir(id), ignore_errors=True)` to remove the per-workflow sandbox dir. Failures SHALL be logged at `WARNING` but SHALL NOT block the delete response.
+- [x] 3.7 Add unit tests:
   - `backend/tests/test_actions_foreach.py` — iterates a list of 3, each iteration completes; `max_iterations` rejected beyond cap; on-error continue skips failing iteration;
   - `backend/tests/test_actions_subworkflow.py` — parent + child run linkage, `final_output` captured, recursion-depth cap fires;
   - `backend/tests/test_condition_predicate.py` — each operator returns the expected bool; missing left-side fails loudly; backward-compat (no predicate, no expr) falls back to `when=="true"`.
-- [ ] 3.8 Smoke-check: `pytest backend/tests/test_actions_foreach.py backend/tests/test_actions_subworkflow.py backend/tests/test_condition_predicate.py -v` passes.
+- [x] 3.8 Smoke-check: `pytest backend/tests/test_actions_foreach.py backend/tests/test_actions_subworkflow.py backend/tests/test_condition_predicate.py -v` passes.
 
 ## 4. Backend agent prompts (Sibling A continued — `[backend-nodes]`)
 

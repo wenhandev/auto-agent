@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ReactFlowProvider } from "@xyflow/react";
+import { ApprovalBanner } from "@/components/ApprovalBanner";
 import { RunLog } from "@/components/RunLog";
+import { RunNowDialog } from "@/components/RunNowDialog";
 import { WorkflowCanvas } from "@/components/WorkflowCanvas";
 import { apiClient, ApiError } from "@/api-platform";
 import { useStore } from "@/store";
@@ -11,14 +13,15 @@ import { usePlatformStore } from "@/platformStore";
 import type { PlatformRunStatus } from "@/platformStore";
 import { routePath } from "@/routes";
 import type {
+  RunCreate,
   RunStatus,
-  WSEvent,
   WorkflowOut,
   WorkflowVersionOut,
 } from "@/types-platform";
 import { ChatPanelSlot } from "./ChatPanelSlot";
 import { WorkflowCredentialsPanel } from "./WorkflowCredentialsPanel";
 import { WorkflowDetailHeader } from "./WorkflowDetailHeader";
+import { WorkflowTriggersPanel } from "./WorkflowTriggersPanel";
 import { Separator } from "@/components/ui/separator";
 
 function workflowQueryKey(id: string) {
@@ -57,8 +60,12 @@ export function WorkflowDetailPage() {
   const platformWorkflowId = usePlatformStore((s) => s.currentWorkflowId);
   const runStatus = usePlatformStore((s) => s.currentRunStatus);
   const currentRunId = usePlatformStore((s) => s.currentRunId);
+  const pendingApproval = usePlatformStore((s) => s.pendingApproval);
   const currentVersion = usePlatformStore((s) => s.currentVersion);
+  const currentWorkflow = usePlatformStore((s) => s.currentWorkflow);
   const versionsCached = usePlatformStore((s) => s.versions);
+  const isWorkflowDirty = usePlatformStore((s) => s.isWorkflowDirty);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
 
   const detailQuery = useQuery({
     queryKey: workflowQueryKey(workflowId ?? ""),
@@ -108,14 +115,45 @@ export function WorkflowDetailPage() {
     },
   });
 
+  const saveMut = useMutation({
+    mutationFn: () => {
+      const wf = usePlatformStore.getState().currentWorkflow;
+      if (!wf) throw new Error("no workflow to save");
+      return apiClient.workflows.createVersion(workflowId!, {
+        workflow: wf,
+        authored_by: "manual",
+      });
+    },
+    onSuccess: (nextVersion) => {
+      if (!detail) return;
+      usePlatformStore.getState().clearWorkflowDirty();
+      queryClient.setQueryData<WorkflowOut>(
+        workflowQueryKey(detail.id),
+        (prev) =>
+          prev ? { ...prev, current_version: nextVersion } : prev,
+      );
+      applyToBothStores(detail, nextVersion);
+      void queryClient.invalidateQueries({
+        queryKey: versionsQueryKey(detail.id),
+      });
+    },
+    onError: (err: unknown) => {
+      console.error("workflow save failed", err);
+    },
+  });
+
   const runMut = useMutation({
-    mutationFn: () => apiClient.runs.create(workflowId!),
+    mutationFn: (body?: RunCreate) => apiClient.runs.create(workflowId!, body),
     onSuccess: (run) => {
+      setRunDialogOpen(false);
       usePlatformStore
         .getState()
         .setCurrentRun(run.id, mapRunStatus(run.status));
+      if (run.pending_approval) {
+        usePlatformStore.getState().setPendingApproval(run.pending_approval);
+      }
       useStore.getState().resetRun();
-      openRunSocket(run.id);
+      navigate(routePath.runReplay(run.id));
     },
     onError: (err: unknown) => {
       const message =
@@ -135,58 +173,17 @@ export function WorkflowDetailPage() {
     },
   });
 
-  function openRunSocket(runId: string) {
-    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${proto}//${window.location.host}/ws/run`);
-    wsRef.current = ws;
-    usePlatformStore.getState().setActiveWS(ws);
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: "start", run_id: runId }));
-    };
-
-    ws.onmessage = (msg) => {
-      try {
-        const frame = JSON.parse(msg.data) as WSEvent;
-        usePlatformStore.getState().applyEvent(frame);
-        useStore.getState().applyEvent({
-          event: frame.event as
-            | "run_started"
-            | "node_started"
-            | "node_progress"
-            | "node_completed"
-            | "node_failed"
-            | "run_completed"
-            | "run_failed",
-          node_id: frame.node_id ?? undefined,
-          ts: frame.ts,
-          message: frame.message ?? undefined,
-          output: frame.output,
-          error: frame.error ?? undefined,
-        });
-      } catch (err) {
-        console.error("ws frame parse failed", err, msg.data);
-      }
-    };
-
-    ws.onerror = (err) => {
-      console.error("ws error", err);
-    };
-
-    ws.onclose = () => {
-      const status = usePlatformStore.getState().currentRunStatus;
-      if (status === "running" || status === "queued") {
-        usePlatformStore.getState().setRunStatus("completed");
-      }
-      usePlatformStore.getState().setActiveWS(null);
-      wsRef.current = null;
-    };
-  }
-
   const onRun = useCallback(() => {
     if (!workflowId) return;
-    runMut.mutate();
-  }, [workflowId, runMut]);
+    setRunDialogOpen(true);
+  }, [workflowId]);
+
+  const onStartRun = useCallback(
+    (body: RunCreate) => {
+      runMut.mutate(body);
+    },
+    [runMut],
+  );
 
   const onAbort = useCallback(() => {
     const ws = wsRef.current;
@@ -212,9 +209,14 @@ export function WorkflowDetailPage() {
         version.workflow,
         version,
       );
+      usePlatformStore.getState().clearWorkflowDirty();
     },
     [versionsCached, workflowId],
   );
+
+  const onSave = useCallback(() => {
+    saveMut.mutate();
+  }, [saveMut]);
 
   const isQueuedOrRunning =
     runStatus === "queued" || runStatus === "running";
@@ -228,6 +230,7 @@ export function WorkflowDetailPage() {
   const onChatWorkflowUpdated = useCallback(
     (nextVersion: WorkflowVersionOut) => {
       if (!detail) return;
+      usePlatformStore.getState().clearWorkflowDirty();
       queryClient.setQueryData<WorkflowOut>(
         workflowQueryKey(detail.id),
         (prev) =>
@@ -285,11 +288,30 @@ export function WorkflowDetailPage() {
         onAbort={onAbort}
         runDisabled={runDisabled}
         abortDisabled={abortDisabled}
+        isDirty={isWorkflowDirty}
+        onSave={onSave}
+        saveDisabled={!isWorkflowDirty || saveMut.isPending}
+        isSaving={saveMut.isPending}
+      />
+      {currentRunId && isQueuedOrRunning && (
+        <ApprovalBanner
+          runId={currentRunId}
+          pending={pendingApproval}
+          onResolved={() => usePlatformStore.getState().setPendingApproval(null)}
+        />
+      )}
+      <RunNowDialog
+        open={runDialogOpen}
+        onOpenChange={setRunDialogOpen}
+        workflowId={workflowId}
+        parameters={currentWorkflow?.parameters ?? []}
+        onSubmit={onStartRun}
+        submitting={runMut.isPending}
       />
       <div className="flex min-h-0 flex-1">
         <div className="relative min-w-0 flex-1 border-r">
           {platformWorkflowId === workflowId ? (
-            <ReactFlowProvider>
+            <ReactFlowProvider key={versionForHeader?.id ?? workflowId}>
               <WorkflowCanvas />
             </ReactFlowProvider>
           ) : (
@@ -304,6 +326,10 @@ export function WorkflowDetailPage() {
               workflowId={workflowId}
               onWorkflowUpdated={onChatWorkflowUpdated}
             />
+          </div>
+          <Separator />
+          <div className="max-h-[220px] overflow-auto">
+            <WorkflowTriggersPanel workflowId={workflowId} />
           </div>
           <Separator />
           <div className="max-h-[280px] overflow-auto">

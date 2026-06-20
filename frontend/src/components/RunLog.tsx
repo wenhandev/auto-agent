@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore } from "@/store";
-import type { RunEvent } from "@/types";
+import type { ItemsPreview, RunEvent } from "@/types";
+import { pickRunEventField } from "@/lib/runEventNormalize";
 import { cn } from "@/lib/utils";
 import { ResultPanel } from "./ResultPanel";
+import { Badge } from "@/components/ui/badge";
 
 const OUTPUT_PREVIEW_LIMIT = 200;
 
@@ -15,14 +17,6 @@ function formatTs(ts: string): string {
   const ss = String(d.getSeconds()).padStart(2, "0");
   const ms = String(d.getMilliseconds()).padStart(3, "0");
   return `${hh}:${mm}:${ss}.${ms}`;
-}
-
-function formatLine(ev: RunEvent): string {
-  const parts: string[] = [`[${formatTs(ev.ts)}]`, ev.event];
-  if (ev.node_id) parts.push(ev.node_id);
-  const tail = ev.message ?? ev.error;
-  if (tail) parts.push(tail);
-  return parts.join(" ");
 }
 
 function stringifyOutput(output: unknown): string {
@@ -40,11 +34,197 @@ function truncate(text: string, limit: number): string {
   return text.slice(0, limit - 1) + "\u2026";
 }
 
-interface OutputBlockProps {
-  output: unknown;
+function pickPayloadField(
+  ev: RunEvent,
+  key: string,
+): unknown {
+  return pickRunEventField(ev, key);
 }
 
-function OutputBlock({ output }: OutputBlockProps) {
+function formatEventLabel(ev: RunEvent, t: ReturnType<typeof useTranslation>["t"]): string {
+  const node = ev.node_id ?? "";
+  switch (ev.event) {
+    case "node_retry":
+      return t("runLog.events.nodeRetry", {
+        node,
+        attempt: String(ev.attempt ?? pickPayloadField(ev, "attempt") ?? "?"),
+      });
+    case "node_awaiting_approval":
+      return t("runLog.events.awaitingApproval", { node });
+    case "node_approved":
+      return t("runLog.events.approved", { node });
+    case "node_rejected":
+      return t("runLog.events.rejected", { node });
+    case "node_self_healed":
+      return t("runLog.events.selfHealed", { node });
+    case "node_self_heal_failed":
+      return t("runLog.events.selfHealFailed", { node });
+    case "cache_hit":
+      return t("runLog.events.cacheHit", { node });
+    case "cache_miss":
+      return t("runLog.events.cacheMiss", { node });
+    case "run_completed_with_errors":
+      return t("runLog.events.completedWithErrors", {
+        count: String(
+          ev.failed_node_count ??
+            pickPayloadField(ev, "failed_node_count") ??
+            "?",
+        ),
+      });
+    case "run_rejected":
+      return t("runLog.events.runRejected");
+    case "branch_pruned":
+      return t("runLog.events.branchPruned", {
+        edge: String(ev.edge_id ?? pickPayloadField(ev, "edge_id") ?? "?"),
+      });
+    case "node_skipped":
+      return t("runLog.events.nodeSkipped", { node });
+    case "merge_waiting":
+      return t("runLog.events.mergeWaiting", {
+        node,
+        arrived: String(ev.arrived ?? pickPayloadField(ev, "arrived") ?? "?"),
+        expected: String(ev.expected ?? pickPayloadField(ev, "expected") ?? "?"),
+      });
+    default:
+      return ev.event;
+  }
+}
+
+function formatLine(
+  ev: RunEvent,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  const label = formatEventLabel(ev, t);
+  const parts: string[] = [`[${formatTs(ev.ts)}]`, label];
+  const detail = formatEventDetail(ev);
+  if (detail) parts.push(detail);
+  return parts.join(" ");
+}
+
+function formatEventDetail(ev: RunEvent): string | null {
+  switch (ev.event) {
+    case "node_retry": {
+      const err =
+        ev.error ??
+        (typeof pickPayloadField(ev, "error") === "string"
+          ? (pickPayloadField(ev, "error") as string)
+          : undefined);
+      const kind =
+        ev.error_kind ??
+        (typeof pickPayloadField(ev, "error_kind") === "string"
+          ? (pickPayloadField(ev, "error_kind") as string)
+          : undefined);
+      if (err && kind) return `${kind}: ${err}`;
+      return err ?? null;
+    }
+    case "node_awaiting_approval":
+      return (
+        ev.prompt ??
+        (typeof pickPayloadField(ev, "prompt") === "string"
+          ? (pickPayloadField(ev, "prompt") as string)
+          : null)
+      );
+    case "node_approved":
+    case "node_rejected": {
+      const decision =
+        ev.decision ??
+        (typeof pickPayloadField(ev, "decision") === "string"
+          ? (pickPayloadField(ev, "decision") as string)
+          : undefined);
+      return decision ? `decision=${decision}` : null;
+    }
+    case "node_self_healed": {
+      const oldSel =
+        ev.original_selector ??
+        (typeof pickPayloadField(ev, "original_selector") === "string"
+          ? (pickPayloadField(ev, "original_selector") as string)
+          : undefined);
+      const newSel =
+        ev.new_selector ??
+        (typeof pickPayloadField(ev, "new_selector") === "string"
+          ? (pickPayloadField(ev, "new_selector") as string)
+          : pickPayloadField(ev, "new_selector"));
+      const mode =
+        ev.mode ??
+        (typeof pickPayloadField(ev, "mode") === "string"
+          ? (pickPayloadField(ev, "mode") as string)
+          : undefined);
+      const parts = [
+        oldSel ? `old=${oldSel}` : null,
+        newSel ? `new=${newSel}` : null,
+        mode ? `mode=${mode}` : null,
+      ].filter(Boolean);
+      return parts.length ? parts.join(" · ") : null;
+    }
+    case "node_self_heal_failed": {
+      const reason =
+        ev.reason ??
+        (typeof pickPayloadField(ev, "reason") === "string"
+          ? (pickPayloadField(ev, "reason") as string)
+          : undefined);
+      return reason ?? ev.error ?? null;
+    }
+    case "cache_hit": {
+      const selector =
+        ev.selector ??
+        (typeof pickPayloadField(ev, "selector") === "string"
+          ? (pickPayloadField(ev, "selector") as string)
+          : undefined);
+      return selector ? `selector=${selector}` : null;
+    }
+    case "cache_miss": {
+      const reason =
+        ev.reason ??
+        (typeof pickPayloadField(ev, "reason") === "string"
+          ? (pickPayloadField(ev, "reason") as string)
+          : undefined);
+      return reason ? `reason=${reason}` : null;
+    }
+    case "run_completed_with_errors": {
+      const ids =
+        ev.failed_node_ids ??
+        (Array.isArray(pickPayloadField(ev, "failed_node_ids"))
+          ? (pickPayloadField(ev, "failed_node_ids") as string[])
+          : undefined);
+      return ids?.length ? `nodes=${ids.join(", ")}` : null;
+    }
+    case "branch_pruned": {
+      const edgeId =
+        ev.edge_id ??
+        (typeof pickPayloadField(ev, "edge_id") === "string"
+          ? (pickPayloadField(ev, "edge_id") as string)
+          : undefined);
+      return edgeId ? `edge=${edgeId}` : null;
+    }
+    default:
+      return ev.message ?? ev.error ?? null;
+  }
+}
+
+function isNestedEvent(ev: RunEvent): boolean {
+  return ev.event === "node_retry";
+}
+
+function previewFromEvent(ev: RunEvent): unknown {
+  const preview = (ev.items_preview ??
+    pickPayloadField(ev, "items_preview")) as ItemsPreview | undefined;
+  if (preview?.json && Object.keys(preview.json).length > 0) {
+    return preview.json;
+  }
+  return ev.output;
+}
+
+function itemsCountFromEvent(ev: RunEvent): number | undefined {
+  const count = ev.items_count ?? pickPayloadField(ev, "items_count");
+  return typeof count === "number" ? count : undefined;
+}
+
+interface OutputBlockProps {
+  output: unknown;
+  itemsCount?: number;
+}
+
+function OutputBlock({ output, itemsCount }: OutputBlockProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const full = stringifyOutput(output);
@@ -58,6 +238,11 @@ function OutputBlock({ output }: OutputBlockProps) {
       className="mt-1 flex flex-col gap-1"
       title={isLong ? t("runLog.toggleHint") : undefined}
     >
+      {itemsCount !== undefined && (
+        <Badge variant="secondary" className="w-fit font-mono text-[10px]">
+          {t("runLog.itemsCount", { count: itemsCount })}
+        </Badge>
+      )}
       <pre
         className={cn(
           "max-h-48 overflow-auto rounded-md border bg-muted/40 px-2 py-1.5 font-mono text-[11px] text-foreground",
@@ -85,8 +270,22 @@ const eventClasses: Record<string, string> = {
   node_progress: "text-sky-300",
   node_completed: "text-emerald-400",
   node_failed: "text-destructive",
+  node_retry: "text-amber-400",
+  node_awaiting_approval: "text-violet-400",
+  node_approved: "text-emerald-400",
+  node_rejected: "text-orange-400",
+  node_self_healed: "text-cyan-400",
+  node_self_heal_failed: "text-amber-500",
+  cache_hit: "text-teal-400",
+  cache_miss: "text-muted-foreground",
   run_completed: "text-emerald-400",
+  run_completed_with_errors: "text-amber-400",
   run_failed: "text-destructive",
+  run_aborted: "text-orange-400",
+  run_rejected: "text-orange-400",
+  branch_pruned: "text-muted-foreground/70",
+  node_skipped: "text-muted-foreground/70",
+  merge_waiting: "text-amber-400/80",
 };
 
 export function RunLog() {
@@ -115,17 +314,24 @@ export function RunLog() {
           </div>
         )}
         {logs.map((ev, i) => (
-          <div key={i} className="mb-1.5">
+          <div
+            key={i}
+            className={cn("mb-1.5", isNestedEvent(ev) && "ml-3 border-l-2 border-amber-500/40 pl-2")}
+          >
             <div
               className={cn(
                 "whitespace-pre-wrap break-all",
                 eventClasses[ev.event] ?? "text-foreground",
               )}
             >
-              {formatLine(ev)}
+              {formatLine(ev, t)}
             </div>
-            {ev.event === "node_completed" && ev.output !== undefined && (
-              <OutputBlock output={ev.output} />
+            {ev.event === "node_completed" &&
+              (ev.output !== undefined || itemsCountFromEvent(ev) !== undefined) && (
+              <OutputBlock
+                output={previewFromEvent(ev)}
+                itemsCount={itemsCountFromEvent(ev)}
+              />
             )}
           </div>
         ))}

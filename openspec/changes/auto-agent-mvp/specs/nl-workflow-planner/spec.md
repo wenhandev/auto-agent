@@ -49,3 +49,8 @@ The system prompt SHALL instruct the model to emit exactly one node per user-per
 ### Requirement: Few-Shot Exemplars
 
 The system prompt SHALL include at least two in-prompt few-shot examples that demonstrate both a deterministic-only workflow and a mixed deterministic + `fuzzy_action` workflow.
+
+#### Scenario: Two exemplars present
+
+- **WHEN** the planner's system prompt is constructed
+- **THEN** it SHALL include at least two few-shot examples, one demonstrating a deterministic-only workflow and one demonstrating a mixed deterministic + `fuzzy_action` workflow.

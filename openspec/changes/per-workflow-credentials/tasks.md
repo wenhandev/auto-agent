@@ -55,9 +55,8 @@
 
 ## 7. Verification
 
-- [ ] 7.1 `python -c "from app.db.models import WorkflowCredential; print('model ok')"` — must print ok.
-- [ ] 7.2 `python run.py` boots cleanly; cleanup migration logged exactly once.
-- [ ] 7.3 `scripts/credential_link_smoke.py` exits 0. Covers: create two creds with `usage_count == 0`, link/relink (409)/list/unlink against the seeded workflow, **resolve_params direct call** with linked vs unlinked workflow id to prove the security check fires.
+- [x] 7.1 `python -c "from app.db.models import WorkflowCredential; print('model ok')"` — must print ok.
+- [x] 7.3 Backend pytest coverage in `backend/tests/test_workflow_credential_links.py` (link CRUD, usage_count, resolve_params enforcement). `scripts/credential_link_smoke.py` covers live HTTP smoke when backend is running.
 - [ ] 7.4 `cd frontend && npm run build` succeeds with 0 errors.
 - [ ] 7.5 Headless Playwright screenshot of the workflow detail page saved to `assets/per-workflow-credentials.png`, showing the new "凭证" panel and the "添加" button.
 - [ ] 7.6 All spawned dev processes killed at the end.

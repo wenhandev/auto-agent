@@ -7,31 +7,31 @@
 
 ## 2. Backend POC (parallel sibling A)
 
-- [ ] 2.1 Write `pyproject.toml` with deps: `fastapi`, `uvicorn[standard]`, `playwright`, `pydantic>=2`, `pydantic-settings`, `python-dotenv`, `google-adk>=1.28`, `litellm`.
-- [ ] 2.2 Write `.env.example` with `LLM_PROVIDER`, OpenAI/Google keys+models, `BROWSER_HEADLESS`, `FUZZY_MAX_STEPS`.
-- [ ] 2.3 Write `app/settings.py` using `pydantic-settings`.
-- [ ] 2.4 Write `app/tools/browser.py` — singleton headed Chromium with lazy launch.
-- [ ] 2.5 Write `app/tools/actions.py` — async `navigate`, `click`, `fill`, `wait`, `screenshot`, `extract` (stubbed return for POC).
-- [ ] 2.6 Write `app/agents/model.py` — `get_adk_model()` returning Gemini id string or `LiteLlm("openai/<model>")`.
-- [ ] 2.7 Write `app/agents/planner.py` — ADK `LlmAgent` with `output_schema=Workflow`, system prompt + 2 few-shots, JSON-mode fallback.
-- [ ] 2.8 Write `app/agents/fuzzy.py` — ADK `LlmAgent` with Playwright `FunctionTool`s; `before_tool_callback` emits `node_progress`; bounded by `FUZZY_MAX_STEPS`.
-- [ ] 2.9 Write `app/executor.py` — async graph walker; routes deterministic nodes to `actions.py`, fuzzy nodes to `FuzzyAgent`; emits events via injected callback.
-- [ ] 2.10 Write `app/main.py` — `GET /api/health`, `GET /api/sample-workflow`, `POST /api/workflow/generate`, `WebSocket /ws/run`.
-- [ ] 2.11 Write the hardcoded six-node sample workflow used by `/api/sample-workflow`.
+- [x] 2.1 Write `pyproject.toml` with deps: `fastapi`, `uvicorn[standard]`, `playwright`, `pydantic>=2`, `pydantic-settings`, `python-dotenv`, `google-adk>=1.28`, `litellm`.
+- [x] 2.2 Write `.env.example` with `LLM_PROVIDER`, OpenAI/Google keys+models, `BROWSER_HEADLESS`, `FUZZY_MAX_STEPS`.
+- [x] 2.3 Write `app/settings.py` using `pydantic-settings`.
+- [x] 2.4 Write `app/tools/browser.py` — singleton headed Chromium with lazy launch.
+- [x] 2.5 Write `app/tools/actions.py` — async `navigate`, `click`, `fill`, `wait`, `screenshot`, `extract` (stubbed return for POC).
+- [x] 2.6 Write `app/agents/model.py` — `get_adk_model()` returning Gemini id string or `LiteLlm("openai/<model>")`.
+- [x] 2.7 Write `app/agents/planner.py` — ADK `LlmAgent` with `output_schema=Workflow`, system prompt + 2 few-shots, JSON-mode fallback.
+- [x] 2.8 Write `app/agents/fuzzy.py` — ADK `LlmAgent` with Playwright `FunctionTool`s; `before_tool_callback` emits `node_progress`; bounded by `FUZZY_MAX_STEPS`.
+- [x] 2.9 Write `app/executor.py` — async graph walker; routes deterministic nodes to `actions.py`, fuzzy nodes to `FuzzyAgent`; emits events via injected callback.
+- [x] 2.10 Write `app/main.py` — `GET /api/health`, `GET /api/sample-workflow`, `POST /api/workflow/generate`, `WebSocket /ws/run`.
+- [x] 2.11 Write the hardcoded six-node sample workflow used by `/api/sample-workflow`.
 - [ ] 2.12 Smoke-check: `python -c "from app.main import app"` imports cleanly.
 
 ## 3. Frontend POC (parallel sibling B)
 
-- [ ] 3.1 Hand-author `package.json` with Vite/React/TS deps + `@xyflow/react`, `zustand`, `dagre` (no `npm create vite`).
-- [ ] 3.2 Write `vite.config.ts` with `/api` + `/ws` proxy to `http://localhost:8000`.
-- [ ] 3.3 Write `tsconfig.json`, `tsconfig.node.json`, `index.html`, `src/main.tsx`.
-- [ ] 3.4 Write `src/types.ts` (imported in step 1.3) and `src/store.ts` (zustand).
-- [ ] 3.5 Write `src/components/GlowNode.tsx` with idle/running/success/error CSS + halo keyframes + shimmer subtitle.
-- [ ] 3.6 Write `src/components/WorkflowCanvas.tsx` with dagre auto-layout and `nodeTypes={glow: GlowNode}`.
-- [ ] 3.7 Write `src/components/RunLog.tsx` with timestamps and indented progress lines.
-- [ ] 3.8 Write `src/components/NLInput.tsx` with textarea + "生成工作流" button hitting `/api/workflow/generate`.
-- [ ] 3.9 Write `src/api.ts` (`getSampleWorkflow`, `generateWorkflow`) and `src/ws.ts` (open `/ws/run`, dispatch events into store).
-- [ ] 3.10 Write `src/App.tsx` — top bar (NLInput + "运行" + "加载示例"), canvas, RunLog. On mount fetch sample workflow.
+- [x] 3.1 Hand-author `package.json` with Vite/React/TS deps + `@xyflow/react`, `zustand`, `dagre` (no `npm create vite`).
+- [x] 3.2 Write `vite.config.ts` with `/api` + `/ws` proxy to `http://localhost:8000`.
+- [x] 3.3 Write `tsconfig.json`, `tsconfig.node.json`, `index.html`, `src/main.tsx`.
+- [x] 3.4 Write `src/types.ts` (imported in step 1.3) and `src/store.ts` (zustand).
+- [x] 3.5 Write `src/components/GlowNode.tsx` with idle/running/success/error CSS + halo keyframes + shimmer subtitle.
+- [x] 3.6 Write `src/components/WorkflowCanvas.tsx` with dagre auto-layout and `nodeTypes={glow: GlowNode}`.
+- [x] 3.7 Write `src/components/RunLog.tsx` with timestamps and indented progress lines.
+- [x] 3.8 Write `src/components/NLInput.tsx` with textarea + "生成工作流" button hitting `/api/workflow/generate`.
+- [x] 3.9 Write `src/api.ts` (`getSampleWorkflow`, `generateWorkflow`) and `src/ws.ts` (open `/ws/run`, dispatch events into store).
+- [x] 3.10 Write `src/App.tsx` — top bar (NLInput + "运行" + "加载示例"), canvas, RunLog. On mount fetch sample workflow.
 - [ ] 3.11 Smoke-check: `npm install && npm run build` (or `tsc --noEmit`) succeeds.
 
 ## 4. Integration verification (parent worker)

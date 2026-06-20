@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auto-agent-mcp"
+version = "0.1.0"
+description = "MCP server exposing auto-agent /api/v1 tools for AI IDEs."
+requires-python = ">=3.11"
+dependencies = [
+    "auto-agent-sdk>=0.1.0",
+    "mcp>=1.12,<2",
+]
+
+[project.scripts]
+auto-agent-mcp = "auto_agent_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["auto_agent_mcp*"]
+
+[tool.setuptools.package-dir]
+"" = "."

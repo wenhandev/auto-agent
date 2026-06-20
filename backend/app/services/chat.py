@@ -14,6 +14,7 @@ from google.genai import types
 from pydantic import BaseModel, ValidationError
 
 from app.agents.model import get_adk_model
+from app.integrations.catalogue_prompt import integration_catalogue_prompt
 from app.schemas import Workflow as WorkflowSchema
 
 
@@ -46,8 +47,8 @@ both to null.
 Patch op formats:
   {"op":"add_node","node":{"id","type","label","params"}}
   {"op":"remove_node","id":"<node id>"}
-  {"op":"update_node","id":"<node id>","patch":{"label"?,"type"?,"params"?}}
-  {"op":"add_edge","edge":{"id","source","target","when"?}}
+  {"op":"update_node","id":"<node id>","patch":{"label"?,"type"?,"params"?,"retry"?,"on_error"?}}
+  {"op":"add_edge","edge":{"id","source","target","when"?,"kind"?}}
   {"op":"remove_edge","id":"<edge id>"}
   {"op":"set_start","id":"<node id>"}
 
@@ -59,8 +60,14 @@ Node types and params:
   fill:         params: { "selector": str, "value": str }
   wait:         params: { "ms": int }
   extract:      params: { "instruction": str }
-  fuzzy_action: params: { "instruction": str }
+  vision_navigate: params: { "goal": str, "max_steps"?: int, "success_criteria"?: str }
+  vision_act:   params: { "instruction": str }
+  vision_extract: params: { "instruction": str, "schema"?: object }
+  fuzzy_action: params: { "instruction": str }  # alias of vision_navigate
+  login:        params: { "credential": str, "url"?: str, "success_criteria"?: str,
+                          "totp_identifier"?: str }
   condition:    params: { "expr": str }    (outgoing edges set when="true"/"false")
+""" + integration_catalogue_prompt() + """
 
 Rules:
 - Reuse existing node/edge ids; introduce new ones with prefixes nX / eX where
@@ -69,7 +76,17 @@ Rules:
 - When adding a node, also add an edge wiring it into the graph unless the
   user only asked for a disconnected node.
 - For "wait" nodes, params.ms is an integer of milliseconds.
+- Prefer a "login" node over hand-rolled fill/click sequences for authentication.
 - Workflow JSON is {nodes:[...], edges:[...], start_id:"<id>"}.
+
+ERROR HANDLING
+Each node may declare a retry policy ({max_attempts, backoff_ms}) and a failure
+policy on_error ∈ {"fail_run", "continue", "branch"}. Edges may carry
+kind="on_error" to be followed when the source node's on_error="branch" and it
+failed. Example: a flaky click node n4 with retry={max_attempts:3, backoff_ms:500}
+and on_error="branch", plus an edge {source:"n4", target:"cleanup_n9",
+kind:"on_error"}, will retry the click up to 3 times, then route to cleanup_n9
+if all attempts fail.
 
 Respond with ONLY the JSON object.
 """

@@ -15,10 +15,20 @@ def _utcnow() -> datetime:
 
 
 def workflow_json_of(version: WorkflowVersion) -> dict:
+    parameters: list = []
+    raw_params = getattr(version, "parameters_json", None)
+    if raw_params:
+        try:
+            parsed = json.loads(raw_params)
+            if isinstance(parsed, list):
+                parameters = parsed
+        except Exception:
+            parameters = []
     return {
         "nodes": json.loads(version.nodes_json),
         "edges": json.loads(version.edges_json),
         "start_id": version.start_id,
+        "parameters": parameters,
     }
 
 
@@ -47,6 +57,7 @@ def _empty_workflow_json() -> dict:
         ],
         "edges": [],
         "start_id": "start",
+        "parameters": [],
     }
 
 
@@ -57,13 +68,20 @@ def create_workflow(
     description: Optional[str] = None,
     initial_workflow_json: Optional[dict] = None,
     authored_by: str = "manual",
+    org_id: Optional[str] = None,
+    created_by: Optional[str] = None,
 ) -> Workflow:
+    from app.services import orgs as org_svc
+
+    resolved_org = org_id or org_svc.get_default_org_id(session)
     wf_json = initial_workflow_json or _empty_workflow_json()
     WorkflowSchema.model_validate(wf_json)
 
     workflow = Workflow(
         name=name,
         description=description,
+        org_id=resolved_org,
+        created_by=created_by,
         created_at=_utcnow(),
         updated_at=_utcnow(),
     )
@@ -76,6 +94,7 @@ def create_workflow(
         nodes_json=json.dumps(wf_json["nodes"], ensure_ascii=False),
         edges_json=json.dumps(wf_json["edges"], ensure_ascii=False),
         start_id=wf_json["start_id"],
+        parameters_json=json.dumps(wf_json.get("parameters", []), ensure_ascii=False),
         authored_by=authored_by,
         created_at=_utcnow(),
     )
@@ -113,6 +132,9 @@ def save_new_version(
         nodes_json=json.dumps(new_workflow_json["nodes"], ensure_ascii=False),
         edges_json=json.dumps(new_workflow_json["edges"], ensure_ascii=False),
         start_id=new_workflow_json["start_id"],
+        parameters_json=json.dumps(
+            new_workflow_json.get("parameters", []), ensure_ascii=False
+        ),
         authored_by=authored_by,
         created_at=_utcnow(),
     )

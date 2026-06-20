@@ -1,0 +1,38 @@
+{
+  "objective": "Log into the Acme Supply Hub supplier portal at http://localhost:8765/static/portal/index.html using email demo@acme.com and password demo1234. Complete the reCAPTCHA checkbox on step 2 and click Verify. Navigate to Orders, search for order PO-2024-8842, click the row to open order details, and extract the order JSON including line items. Then go to Invoices, click Download Summary for invoice INV-2024-3325, and extract the invoice summary JSON. Finally open Support, submit a ticket: category System Integration, subject API webhook delay, description EDI 856 acknowledgments are delayed by 2 hours since Nov 28. Return all extracted data.",
+  "start_url": "http://localhost:8765/static/portal/index.html",
+  "max_steps": 60,
+  "max_seconds": 500,
+  "success_criteria": "Successfully logged in, extracted order PO-2024-8842 line items JSON, extracted invoice INV-2024-3325 summary with tax, and submitted a support ticket with a ticket ID.",
+  "allowed_domains": ["localhost", "127.0.0.1"],
+  "data_schema": {
+    "type": "object",
+    "properties": {
+      "order": {
+        "type": "object",
+        "properties": {
+          "orderId": { "type": "string" },
+          "buyer": { "type": "string" },
+          "amount": { "type": "number" },
+          "lineItems": { "type": "array" }
+        }
+      },
+      "invoice": {
+        "type": "object",
+        "properties": {
+          "invoiceId": { "type": "string" },
+          "totalWithTax": { "type": "number" }
+        }
+      },
+      "ticket": {
+        "type": "object",
+        "properties": {
+          "ticketId": { "type": "string" },
+          "category": { "type": "string" }
+        }
+      }
+    }
+  },
+  "require_confirmation": false,
+  "synthesize_workflow": true
+}

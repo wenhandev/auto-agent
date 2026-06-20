@@ -14,6 +14,9 @@ from app.schemas_api import (
     LlmConfigOut,
     LlmConfigUpsert,
     LlmEffectiveOut,
+    ModelPriceEntry,
+    ModelPricesOut,
+    ModelPricesUpdate,
 )
 from app.services import llm_runtime
 
@@ -44,6 +47,7 @@ def _to_out(row: LlmConfig) -> LlmConfigOut:
         self_healing_vision_threshold=float(
             getattr(row, "self_healing_vision_threshold", 0.6)
         ),
+        selector_cache_enabled=bool(getattr(row, "selector_cache_enabled", True)),
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -94,6 +98,11 @@ def upsert_config(
             0.6
             if body.self_healing_vision_threshold is None
             else float(body.self_healing_vision_threshold)
+        ),
+        selector_cache_enabled=(
+            True
+            if body.selector_cache_enabled is None
+            else bool(body.selector_cache_enabled)
         ),
         created_at=_utcnow(),
         updated_at=_utcnow(),
@@ -149,6 +158,34 @@ def delete_config(
     if was_active:
         llm_runtime.invalidate_cache()
     return {"ok": True}
+
+
+@router.get("/model-prices", response_model=ModelPricesOut)
+def get_model_prices() -> ModelPricesOut:
+    from app.services import cost_tracking as cost_svc
+
+    prices = cost_svc.get_model_prices()
+    return ModelPricesOut(
+        prices={
+            model: ModelPriceEntry(**rates)
+            for model, rates in prices.items()
+        }
+    )
+
+
+@router.put("/model-prices", response_model=ModelPricesOut)
+def update_model_prices(body: ModelPricesUpdate) -> ModelPricesOut:
+    from app.services import cost_tracking as cost_svc
+
+    saved = cost_svc.save_model_prices(
+        {model: entry.model_dump() for model, entry in body.prices.items()}
+    )
+    return ModelPricesOut(
+        prices={
+            model: ModelPriceEntry(**rates)
+            for model, rates in saved.items()
+        }
+    )
 
 
 @router.post("/test")

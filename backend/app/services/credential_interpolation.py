@@ -1,135 +1,40 @@
 from __future__ import annotations
 
-import json
-import re
 from typing import Any, Optional
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from app.db.crypto import decrypt
-from app.db.models import Credential, WorkflowCredential
-
-
-class CredentialResolutionError(ValueError):
-    pass
-
-
-TOKEN_RE = re.compile(
-    r"\{\{\s*cred\.(?P<name>[A-Za-z0-9_\-]+)\.(?P<field>[A-Za-z0-9_]+)\s*\}\}"
+from app.services.credential_service import (
+    TOKEN_RE,
+    CredentialResolutionError,
+    make_resolver,
+    walk_and_substitute,
 )
 
 
-def _linked_credential_ids(workflow_id: str, session: Session) -> set[str]:
-    rows = session.exec(
-        select(WorkflowCredential.credential_id).where(
-            WorkflowCredential.workflow_id == workflow_id
-        )
-    ).all()
-    return {r for r in rows}
-
-
-def _load_fields(
-    name: str,
+def make_token_resolver(
     session: Session,
     *,
-    workflow_id: Optional[str],
-    allowed_ids: Optional[set[str]],
-) -> dict[str, str]:
-    cred = session.exec(select(Credential).where(Credential.name == name)).first()
-    if cred is None:
-        raise CredentialResolutionError(f"unknown credential {name!r}")
-    if workflow_id is not None:
-        if allowed_ids is None or cred.id not in allowed_ids:
-            raise CredentialResolutionError(
-                f"credential {name!r} is not linked to this workflow; "
-                f"open the workflow's '凭证' panel and add it before running"
-            )
-    try:
-        plaintext = decrypt(cred.ciphertext)
-    except Exception as exc:
-        raise CredentialResolutionError(
-            f"credential {name!r}: decryption failed; secret key may have changed"
-        ) from exc
-    try:
-        data = json.loads(plaintext.decode("utf-8"))
-    except Exception as exc:
-        raise CredentialResolutionError(
-            f"credential {name!r}: stored blob is not valid JSON"
-        ) from exc
-    if not isinstance(data, dict):
-        raise CredentialResolutionError(
-            f"credential {name!r}: stored blob is not an object"
-        )
-    return data
+    workflow_id: Optional[str] = None,
+):
+    """Return a ``resolve(name, field) -> str`` or ``resolve(mount, name, field)`` callable.
 
+    Shares one decrypt cache and one linked-id check across all tokens in a
+    node's params. Used by the chained ``variable_interpolation`` pass so
+    credential and node-output tokens resolve in a single tree walk.
+    """
+    resolver = make_resolver(session, workflow_id=workflow_id)
 
-def _substitute_in_string(
-    text: str,
-    session: Session,
-    cache: dict[str, dict[str, str]],
-    *,
-    workflow_id: Optional[str],
-    allowed_ids: Optional[set[str]],
-) -> str:
-    def repl(match: re.Match[str]) -> str:
-        name = match.group("name")
-        field = match.group("field")
-        if name not in cache:
-            cache[name] = _load_fields(
-                name,
-                session,
-                workflow_id=workflow_id,
-                allowed_ids=allowed_ids,
-            )
-        fields = cache[name]
-        if field not in fields:
-            raise CredentialResolutionError(
-                f"credential {name!r} has no field {field!r}"
-            )
-        return str(fields[field])
+    def resolve(name_or_mount: str, field_or_name: str, field: str | None = None) -> str:
+        if field is None:
+            return resolver.resolve(name_or_mount, field_or_name)
+        return resolver.resolve(field_or_name, field, mount=name_or_mount)
 
-    return TOKEN_RE.sub(repl, text)
+    def resolve_token_middle(name_part: str, fld: str) -> str:
+        return resolver.resolve_token_middle(name_part, fld)
 
-
-def _walk(
-    value: Any,
-    session: Session,
-    cache: dict[str, dict[str, str]],
-    *,
-    workflow_id: Optional[str],
-    allowed_ids: Optional[set[str]],
-) -> Any:
-    if isinstance(value, str):
-        return _substitute_in_string(
-            value,
-            session,
-            cache,
-            workflow_id=workflow_id,
-            allowed_ids=allowed_ids,
-        )
-    if isinstance(value, list):
-        return [
-            _walk(
-                v,
-                session,
-                cache,
-                workflow_id=workflow_id,
-                allowed_ids=allowed_ids,
-            )
-            for v in value
-        ]
-    if isinstance(value, dict):
-        return {
-            k: _walk(
-                v,
-                session,
-                cache,
-                workflow_id=workflow_id,
-                allowed_ids=allowed_ids,
-            )
-            for k, v in value.items()
-        }
-    return value
+    resolve.resolve_token_middle = resolve_token_middle  # type: ignore[attr-defined]
+    return resolve
 
 
 def resolve_params(
@@ -148,17 +53,13 @@ def resolve_params(
     credential by name) so ephemeral / preview runs that never persisted
     a ``Run`` row keep working.
     """
-    cache: dict[str, dict[str, str]] = {}
-    allowed_ids: Optional[set[str]] = None
-    if workflow_id is not None:
-        allowed_ids = _linked_credential_ids(workflow_id, session)
-    return _walk(
-        params,
-        session,
-        cache,
-        workflow_id=workflow_id,
-        allowed_ids=allowed_ids,
-    )
+    resolver = make_resolver(session, workflow_id=workflow_id)
+    return walk_and_substitute(params, resolver)
 
 
-__all__ = ["resolve_params", "CredentialResolutionError", "TOKEN_RE"]
+__all__ = [
+    "resolve_params",
+    "make_token_resolver",
+    "CredentialResolutionError",
+    "TOKEN_RE",
+]

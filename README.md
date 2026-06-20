@@ -1,6 +1,41 @@
-# auto-agent — Local NL → Flowchart → Live Browser Automation
+# auto-agent — Client-first browser automation
 
-## What it is
+## Primary onboarding: Auto Agent Client
+
+The recommended way to run automations is the **native client app** (Tauri + local runtime sidecar). One install gives you login, workflow viewing, local runs, recordings, autonomous tasks, and encrypted local LLM keys.
+
+**Start here:** [client/README.md](client/README.md)
+
+Download installers from your cloud console at **`/client`** (production: [https://rpa.wenhandev.com/client](https://rpa.wenhandev.com/client)).
+
+Quick dev setup:
+
+```bash
+# Terminal 1 — cloud backend
+cd backend && source .venv/bin/activate && uvicorn app.main:app --port 8001
+
+# Terminal 2 — client (Tauri + sidecar + UI)
+cd client && npm install && npm run tauri:dev
+```
+
+Routes in the client shell include **Run console**, **Workflows**, **Recordings**, **Autonomous task** (`/tasks/new`), and **Settings**.
+
+## Web console (Auto Agent)
+
+| Path | Use when |
+|------|----------|
+| [Web UI](frontend/) (`npm run dev`) | Org admin, worker approval, workflow editor, team settings, **client download** |
+| Production | [https://rpa.wenhandev.com](https://rpa.wenhandev.com) — control plane only (no Playwright on server) |
+
+The web console and Auto Agent Client share the same cloud session and approval gates; the browser UI is for administration and design, not day-to-day execution.
+
+## Sidecar build (developers)
+
+PyInstaller scripts in [worker/](worker/README.md) package the Python runtime embedded inside the Client. End users do not install or run a separate CLI worker.
+
+---
+
+## What it is (web demo / legacy POC)
 
 `auto-agent` is a local proof-of-concept that turns a natural-language
 description of a browser task (Chinese or English) into a typed `Workflow` JSON

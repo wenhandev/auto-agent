@@ -1,39 +1,39 @@
 ## 1. Shared contract (parent worker)
 
-- [ ] 1.1 `[shared-contract]` Extend `backend/app/schemas.py`:
+- [x] 1.1 `[shared-contract]` Extend `backend/app/schemas.py`:
   - add `"approval"` to the `NodeType` literal;
   - add `ApprovalInputSpec(BaseModel)` and `ApprovalParams(BaseModel)`;
   - register a per-type params validator so `Node(type="approval", params=...)` parses `params` into `ApprovalParams`.
-- [ ] 1.2 `[shared-contract]` Add `RunApproval` SQLModel to `backend/app/db/models.py`:
+- [x] 1.2 `[shared-contract]` Add `RunApproval` SQLModel to `backend/app/db/models.py`:
   - `id: str` PK, `run_id: str` FK + index, `node_id: str`, `seq: int` (monotonic within `run_id`, indexed unique on `(run_id, seq)`);
   - `prompt: str`, `inputs_schema: list[dict]` (`sa_column=Column(JSON)`);
   - `decision: Optional[Literal["approve","reject","lost"]] = None`, `decision_inputs: dict = Field(default_factory=dict, sa_column=Column(JSON))`;
   - `requested_at: datetime`, `resolved_at: Optional[datetime] = None`, `resolved_by: Optional[str] = None` (reserved).
-- [ ] 1.3 `[shared-contract]` Extend `backend/app/schemas_api.py`:
+- [x] 1.3 `[shared-contract]` Extend `backend/app/schemas_api.py`:
   - add `"rejected"` to the `RunStatus` literal;
   - add `"node_awaiting_approval"`, `"node_approved"`, `"node_rejected"`, `"run_rejected"` to the event-type literal;
   - add `PendingApproval(BaseModel)` (`{node_id, prompt, inputs_schema, requested_at}`);
   - add `pending_approval: Optional[PendingApproval] = None` to `RunSummary` and `RunOut`;
   - add `ApprovalDecisionRequest(BaseModel)` (`{decision: Literal["approve","reject"], inputs: dict = Field(default_factory=dict)}`) and `ApprovalDecisionResponse` (echoed decision + resolved_at).
-- [ ] 1.4 `[shared-contract]` Mirror TS types in `frontend/src/types-platform.ts`:
+- [x] 1.4 `[shared-contract]` Mirror TS types in `frontend/src/types-platform.ts`:
   - `RunStatus` includes `"rejected"`;
   - event-type union grows;
   - `PendingApproval` shape;
   - `ApprovalDecisionRequest` shape;
   - `Node.params` for type `"approval"` matches `ApprovalParams` (a discriminated union per node type).
-- [ ] 1.5 `[shared-contract]` Add `apiClient.runs.respondToApproval(runId, nodeId, body)` and `apiClient.runs.getPendingApproval(runId)` stubs to `frontend/src/api-platform.ts`.
-- [ ] 1.6 `[shared-contract]` Add `backend/app/services/notifications.py` with the locked async `emit(event_name, payload)` no-op stub (`log.info` only) per design Decision 9. Export.
-- [ ] 1.7 `[shared-contract]` Smoke-check: `python -c "from app.db.models import RunApproval; from app.schemas import Node; n = Node(id='x', type='approval', label='check', params={'prompt':'ok?'}); print('ok')"` and `cd frontend && npx tsc --noEmit` pass.
+- [x] 1.5 `[shared-contract]` Add `apiClient.runs.respondToApproval(runId, nodeId, body)` and `apiClient.runs.getPendingApproval(runId)` stubs to `frontend/src/api-platform.ts`.
+- [x] 1.6 `[shared-contract]` Add `backend/app/services/notifications.py` with the locked async `emit(event_name, payload)` no-op stub (`log.info` only) per design Decision 9. Export.
+- [x] 1.7 `[shared-contract]` Smoke-check: `python -c "from app.db.models import RunApproval; from app.schemas import Node; n = Node(id='x', type='approval', label='check', params={'prompt':'ok?'}); print('ok')"` and `cd frontend && npx tsc --noEmit` pass.
 
 ## 2. Backend (Sibling A — `[backend]`)
 
-- [ ] 2.1 Author `backend/app/services/approvals.py` — singleton service with:
+- [x] 2.1 Author `backend/app/services/approvals.py` — singleton service with:
   - in-memory `_events: dict[str, asyncio.Event]` keyed by approval id;
   - `request(run_id, node_id, prompt, inputs_schema) -> RunApproval` inserts the row and registers a fresh `asyncio.Event`;
   - `resolve(approval_id, decision, inputs) -> RunApproval` validates the inputs against `inputs_schema`, updates the row, sets `resolved_at`, fires the event;
   - `wait(approval_id) -> RunApproval` awaits the event and reloads the row;
   - `pending_for_run(run_id) -> Optional[RunApproval]` returns the latest unresolved row.
-- [ ] 2.2 Modify `backend/app/executor.py::run_workflow` — when `node.type == "approval"`:
+- [x] 2.2 Modify `backend/app/executor.py::run_workflow` — when `node.type == "approval"`:
   - call `approvals_service.request(...)`;
   - emit `node_awaiting_approval` with the row's `prompt` and `inputs_schema`;
   - call `notifications.emit("approval_requested", {run_id, workflow_id, node_id, prompt})`;
@@ -41,45 +41,45 @@
   - on `decision == "approve"`: set `context[node.id] = {"decision":"approve","inputs":resolved.inputs}`, emit `node_approved` AND `node_completed(output=context[node.id], attempt=1)`, continue traversal;
   - on `decision == "reject"`: emit `node_rejected` with `output={"decision":"reject","inputs":resolved.inputs}`, emit `run_rejected`, transition the run to `status="rejected"`, stop traversal;
   - on `decision == "lost"`: emit `node_failed` AND `run_failed` (this branch is only entered on restart-reaping; see §2.5).
-- [ ] 2.3 Author `backend/app/routers/approvals.py` with the resolve endpoint:
+- [x] 2.3 Author `backend/app/routers/approvals.py` with the resolve endpoint:
   - `POST /api/runs/{run_id}/approvals/{node_id}` body `ApprovalDecisionRequest` → 200 `ApprovalDecisionResponse`;
   - look up the latest unresolved `RunApproval` for `(run_id, node_id)`; 404 if absent; 410 if the parent run is not `running`; 422 if input validation fails;
   - call `approvals_service.resolve(...)`; return echoed decision.
-- [ ] 2.4 Modify `backend/app/routers/runs.py` — every list / detail response computes `pending_approval` from `approvals_service.pending_for_run(...)` (or a single `SELECT … LIMIT 1` per run for list, batched via `IN` for the runs-list endpoint).
-- [ ] 2.5 Modify `backend/app/main.py::lifespan` — after `init_db()` AND after the credential backfill, run `reap_lost_approvals_on_startup()` which:
+- [x] 2.4 Modify `backend/app/routers/runs.py` — every list / detail response computes `pending_approval` from `approvals_service.pending_for_run(...)` (or a single `SELECT … LIMIT 1` per run for list, batched via `IN` for the runs-list endpoint).
+- [x] 2.5 Modify `backend/app/main.py::lifespan` — after `init_db()` AND after the credential backfill, run `reap_lost_approvals_on_startup()` which:
   - finds every `RunApproval` row with `decision IS NULL` whose parent `Run.status == "running"`;
   - marks `decision = "lost"`, sets `resolved_at = now()`;
   - transitions each affected `Run` to `status = "failed"`, `finished_at = now()`;
   - appends a `run_failed` `RunEvent` with payload `{"reason":"approval lost across backend restart","approval_id":...}`;
   - logs one `WARNING` line per affected run.
-- [ ] 2.6 Modify `backend/app/services/runs.py` — recognise the new terminal `"rejected"` status everywhere it does today's `completed|failed|aborted` switching: scheduler dequeue, abort short-circuit, `RunOut` serialisation, `run_rejected` event handling. Abort during an approval wait still transitions to `"aborted"`, NOT `"rejected"`.
-- [ ] 2.7 Add unit tests `backend/tests/test_approvals_service.py`:
+- [x] 2.6 Modify `backend/app/services/runs.py` — recognise the new terminal `"rejected"` status everywhere it does today's `completed|failed|aborted` switching: scheduler dequeue, abort short-circuit, `RunOut` serialisation, `run_rejected` event handling. Abort during an approval wait still transitions to `"aborted"`, NOT `"rejected"`.
+- [x] 2.7 Add unit tests `backend/tests/test_approvals_service.py`:
   - `request` inserts a pending row;
   - `resolve(approve)` sets the row + fires the event;
   - `resolve(reject)` likewise;
   - `wait` blocks until `resolve` is called from another task;
   - duplicate `resolve` against an already-resolved row raises;
   - `pending_for_run` returns the latest unresolved row.
-- [ ] 2.8 Add unit tests `backend/tests/test_approvals_router.py`:
+- [x] 2.8 Add unit tests `backend/tests/test_approvals_router.py`:
   - happy path approve resumes the run and produces `node_completed` with the inputs in `output.inputs`;
   - reject terminates the run as `rejected` with a `run_rejected` event;
   - duplicate POST returns 409; invalid inputs return 422; non-`running` parent run returns 410.
-- [ ] 2.9 Add unit tests `backend/tests/test_lifespan_reap_lost_approvals.py` — pre-seed a pending `RunApproval` + a `running` `Run`, call the reap helper, assert decision=`lost`, run.status=`failed`, `run_failed` event appended.
-- [ ] 2.10 Update `backend/app/agents/editor.py` and `backend/app/agents/planner.py` system prompts — append a paragraph describing the `approval` node type with one example.
-- [ ] 2.11 Smoke-check: `pytest backend/tests/test_approvals_service.py backend/tests/test_approvals_router.py backend/tests/test_lifespan_reap_lost_approvals.py -v` passes.
+- [x] 2.9 Add unit tests `backend/tests/test_lifespan_reap_lost_approvals.py` — pre-seed a pending `RunApproval` + a `running` `Run`, call the reap helper, assert decision=`lost`, run.status=`failed`, `run_failed` event appended.
+- [x] 2.10 Update `backend/app/agents/editor.py` and `backend/app/agents/planner.py` system prompts — append a paragraph describing the `approval` node type with one example.
+- [x] 2.11 Smoke-check: `pytest backend/tests/test_approvals_service.py backend/tests/test_approvals_router.py backend/tests/test_lifespan_reap_lost_approvals.py -v` passes.
 
 ## 3. Frontend (Sibling B — `[frontend]`)
 
-- [ ] 3.1 Author `frontend/src/approval/PendingApprovalBanner.tsx` — given the workflow's currently-running run, polls `apiClient.runs.getPendingApproval(runId)` every 2 s (and on socket `node_awaiting_approval` event) for backup. When pending, renders a prominent banner at the top of the detail page with:
+- [x] 3.1 Author `frontend/src/approval/PendingApprovalBanner.tsx` — given the workflow's currently-running run, polls `apiClient.runs.getPendingApproval(runId)` every 2 s (and on socket `node_awaiting_approval` event) for backup. When pending, renders a prominent banner at the top of the detail page with:
   - the prompt text;
   - the inputs form (one field per `ApprovalInputSpec`; required fields marked with an asterisk; default values pre-populated);
   - 同意 / 拒绝 buttons (labels from `approve_label` / `reject_label` if present);
   - elapsed-time text ("已等待 N 分钟").
-- [ ] 3.2 Author `frontend/src/approval/ApprovalForm.tsx` — small form helper rendering string / number / boolean inputs. Validation: required fields blocking submit; type coercion on submit (number input → JS number).
-- [ ] 3.3 Mount `<PendingApprovalBanner runId={...}/>` at the top of the workflow detail page when its current run is in a pending-approval state. Hidden otherwise.
-- [ ] 3.4 Update the runs-list page to render a distinct `等待审批` pill when `pending_approval != null`. The pill links to the parent workflow's detail page (with the run pre-selected).
-- [ ] 3.5 Update the runs-list page to render a `已拒绝` pill for the new `rejected` terminal status. Style: neutral / amber (NOT red, which is for `failed`).
-- [ ] 3.6 Update the RunLog renderer (semantic role — the live event stream) to render `node_awaiting_approval`, `node_approved`, `node_rejected`, `run_rejected` events with appropriate icons.
+- [x] 3.2 Author `frontend/src/approval/ApprovalForm.tsx` — small form helper rendering string / number / boolean inputs. Validation: required fields blocking submit; type coercion on submit (number input → JS number).
+- [x] 3.3 Mount `<PendingApprovalBanner runId={...}/>` at the top of the workflow detail page when its current run is in a pending-approval state. Hidden otherwise.
+- [x] 3.4 Update the runs-list page to render a distinct `等待审批` pill when `pending_approval != null`. The pill links to the parent workflow's detail page (with the run pre-selected).
+- [x] 3.5 Update the runs-list page to render a `已拒绝` pill for the new `rejected` terminal status. Style: neutral / amber (NOT red, which is for `failed`).
+- [x] 3.6 Update the RunLog renderer (semantic role — the live event stream) to render `node_awaiting_approval`, `node_approved`, `node_rejected`, `run_rejected` events with appropriate icons.
 - [ ] 3.7 Update the RunReplay player to handle the four new event types (render them, no actual blocking — replay just shows the event in sequence). The wait between `node_awaiting_approval` and the resolving event is compressed to 0 (same rule as `wait` and `node_retry`).
 - [ ] 3.8 Update the canvas to render the `approval` node type with a distinct lucide icon (use the same data-node-type approach the canvas already uses for other types; no CSS layout change).
 - [ ] 3.9 Smoke-check: `pnpm build` clean; `tsc --noEmit` clean.

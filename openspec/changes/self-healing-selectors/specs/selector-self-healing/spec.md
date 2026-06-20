@@ -15,7 +15,7 @@ Healed selectors are NOT persisted to the workflow automatically. The frontend r
 - **As an operator**, I want to disable self-healing globally when I'm running cost-sensitive workflows, and per-node when I want some specific actions to fail loudly rather than be auto-corrected.
 - **As an operator**, I want self-healed workflows to require my approval before the new selectors land in the workflow JSON, so the platform never silently mutates my automations.
 
-## Functional requirements
+## ADDED Requirements
 
 ### Requirement: Action Wrapper For `click` And `fill`
 

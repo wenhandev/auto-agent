@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy import func
 from sqlmodel import Session, select
+
+from app.auth.authorization import (
+    effective_role,
+    require_min_role,
+    require_workflow_visible,
+    workflow_visibility_filter,
+)
+from app.auth.context import AuthContext, get_org_context, org_scope_filter, require_org_match
 
 from app.db.crypto import decrypt
 from app.db.models import (
@@ -20,14 +30,21 @@ from app.db.models import (
 from app.db.session import get_session
 from app.schemas_api import (
     CredentialListItem,
+    LastOutputShapesResponse,
+    SelectorCacheStatsOut,
+    StagingFileOut,
     WorkflowCreate,
     WorkflowCredentialLinkRequest,
     WorkflowListItem,
     WorkflowOut,
     WorkflowUpdate,
+    WorkflowVersionCreate,
     WorkflowVersionOut,
 )
+from app.services import run_inputs as run_input_svc
 from app.services import workflows as workflow_svc
+from app.services.autonomous_workflows import is_hidden_workflow
+from app.services import selector_cache as cache_svc
 
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
@@ -66,13 +83,26 @@ def _workflow_to_out(workflow: Workflow, session: Session) -> WorkflowOut:
     )
 
 
-@router.get("", response_model=list[WorkflowListItem])
-def list_workflows(session: Session = Depends(get_session)) -> list[WorkflowListItem]:
+def list_workflows_impl(
+    session: Session,
+    org_id: str,
+    *,
+    user_id: str | None = None,
+    role: str = "member",
+) -> list[WorkflowListItem]:
+    scope = org_scope_filter(Workflow, org_id, session)
+    visibility = workflow_visibility_filter(
+        Workflow, user_id=user_id, role=role
+    )
     workflows = session.exec(
-        select(Workflow).order_by(Workflow.updated_at.desc())  # type: ignore[attr-defined]
+        select(Workflow)
+        .where(scope, visibility)
+        .order_by(Workflow.updated_at.desc())  # type: ignore[attr-defined]
     ).all()
     items: list[WorkflowListItem] = []
     for wf in workflows:
+        if is_hidden_workflow(wf):
+            continue
         current_index = None
         if wf.current_version_id:
             v = session.get(WorkflowVersion, wf.current_version_id)
@@ -96,39 +126,82 @@ def list_workflows(session: Session = Depends(get_session)) -> list[WorkflowList
     return items
 
 
-@router.post("", response_model=WorkflowOut)
-def create_workflow(
-    body: WorkflowCreate, session: Session = Depends(get_session)
+@router.get("", response_model=list[WorkflowListItem])
+def list_workflows(
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> list[WorkflowListItem]:
+    return list_workflows_impl(
+        session,
+        ctx.org_id,
+        user_id=ctx.user_id,
+        role=effective_role(ctx),
+    )
+
+
+def create_workflow_for_org(
+    body: WorkflowCreate,
+    session: Session,
+    org_id: str,
+    *,
+    created_by: str | None = None,
 ) -> WorkflowOut:
     workflow = workflow_svc.create_workflow(
         name=body.name,
         session=session,
         description=body.description,
         authored_by="manual",
+        org_id=org_id,
+        created_by=created_by,
     )
+    return _workflow_to_out(workflow, session)
+
+
+@router.post("", response_model=WorkflowOut)
+def create_workflow(
+    body: WorkflowCreate,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> WorkflowOut:
+    return create_workflow_for_org(
+        body, session, ctx.org_id, created_by=ctx.user_id
+    )
+
+
+def get_workflow_for_org(
+    workflow_id: str,
+    session: Session,
+    org_id: str,
+    ctx: AuthContext | None = None,
+) -> WorkflowOut:
+    workflow = session.get(Workflow, workflow_id)
+    if workflow is None:
+        raise HTTPException(404, detail="workflow not found")
+    require_org_match(workflow.org_id, org_id, session)
+    if ctx is not None:
+        require_workflow_visible(workflow, ctx)
     return _workflow_to_out(workflow, session)
 
 
 @router.get("/{workflow_id}", response_model=WorkflowOut)
 def get_workflow(
-    workflow_id: str, session: Session = Depends(get_session)
+    workflow_id: str,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
 ) -> WorkflowOut:
-    workflow = session.get(Workflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(404, detail="workflow not found")
-    return _workflow_to_out(workflow, session)
+    return get_workflow_for_org(workflow_id, session, ctx.org_id, ctx=ctx)
 
 
-@router.patch("/{workflow_id}", response_model=WorkflowOut)
-@router.put("/{workflow_id}", response_model=WorkflowOut)
-def update_workflow(
+def update_workflow_for_org(
     workflow_id: str,
     body: WorkflowUpdate,
-    session: Session = Depends(get_session),
+    session: Session,
+    org_id: str,
 ) -> WorkflowOut:
     workflow = session.get(Workflow, workflow_id)
     if workflow is None:
         raise HTTPException(404, detail="workflow not found")
+    require_org_match(workflow.org_id, org_id, session)
     if body.name is not None:
         workflow.name = body.name
     if body.description is not None:
@@ -140,13 +213,30 @@ def update_workflow(
     return _workflow_to_out(workflow, session)
 
 
-@router.delete("/{workflow_id}")
-def delete_workflow(
-    workflow_id: str, session: Session = Depends(get_session)
+@router.patch("/{workflow_id}", response_model=WorkflowOut)
+@router.put("/{workflow_id}", response_model=WorkflowOut)
+def update_workflow(
+    workflow_id: str,
+    body: WorkflowUpdate,
+    session: Session = Depends(get_session),
+    _ctx: AuthContext = Depends(get_org_context),
+) -> WorkflowOut:
+    return update_workflow_for_org(workflow_id, body, session, _ctx.org_id)
+
+
+def delete_workflow_for_org(
+    workflow_id: str,
+    session: Session,
+    org_id: str,
+    ctx: AuthContext | None = None,
 ) -> dict:
     workflow = session.get(Workflow, workflow_id)
     if workflow is None:
         raise HTTPException(404, detail="workflow not found")
+    require_org_match(workflow.org_id, org_id, session)
+    if ctx is not None:
+        require_workflow_visible(workflow, ctx)
+        require_min_role(ctx, "member")
 
     runs = session.exec(select(Run).where(Run.workflow_id == workflow_id)).all()
     for run in runs:
@@ -158,7 +248,7 @@ def delete_workflow(
         from app.services import scheduler as scheduler_svc
 
         for trig in triggers:
-            if trig.type == "cron":
+            if trig.type in ("cron", "poll"):
                 scheduler_svc.unregister_trigger(trig.id)
             session.delete(trig)
     sessions = session.exec(
@@ -184,19 +274,68 @@ def delete_workflow(
     return {"ok": True}
 
 
-@router.get("/{workflow_id}/versions", response_model=list[WorkflowVersionOut])
-def list_versions(
-    workflow_id: str, session: Session = Depends(get_session)
-) -> list[WorkflowVersionOut]:
+@router.delete("/{workflow_id}")
+def delete_workflow(
+    workflow_id: str,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> dict:
+    return delete_workflow_for_org(workflow_id, session, ctx.org_id, ctx=ctx)
+
+
+def _workflow_for_org(
+    session: Session,
+    workflow_id: str,
+    org_id: str,
+    ctx: AuthContext | None = None,
+) -> Workflow:
     workflow = session.get(Workflow, workflow_id)
     if workflow is None:
         raise HTTPException(404, detail="workflow not found")
+    require_org_match(workflow.org_id, org_id, session)
+    if ctx is not None:
+        require_workflow_visible(workflow, ctx)
+    return workflow
+
+
+@router.get("/{workflow_id}/versions", response_model=list[WorkflowVersionOut])
+def list_versions(
+    workflow_id: str,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> list[WorkflowVersionOut]:
+    _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
     versions = session.exec(
         select(WorkflowVersion)
         .where(WorkflowVersion.workflow_id == workflow_id)
         .order_by(WorkflowVersion.version_index)
     ).all()
     return [_version_to_out(v) for v in versions]
+
+
+@router.post(
+    "/{workflow_id}/versions",
+    response_model=WorkflowVersionOut,
+)
+def create_version(
+    workflow_id: str,
+    body: WorkflowVersionCreate,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> WorkflowVersionOut:
+    _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
+    try:
+        version = workflow_svc.save_new_version(
+            workflow_id,
+            body.workflow.model_dump(),
+            body.authored_by,
+            session,
+        )
+    except ValueError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    return _version_to_out(version)
 
 
 @router.get(
@@ -207,7 +346,9 @@ def get_version(
     workflow_id: str,
     version_id: str,
     session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
 ) -> WorkflowVersionOut:
+    _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
     version = session.get(WorkflowVersion, version_id)
     if version is None or version.workflow_id != workflow_id:
         raise HTTPException(404, detail="workflow version not found")
@@ -258,11 +399,11 @@ def _usage_count_for(credential_id: str, session: Session) -> int:
     "/{workflow_id}/credentials", response_model=list[CredentialListItem]
 )
 def list_workflow_credentials(
-    workflow_id: str, session: Session = Depends(get_session)
+    workflow_id: str,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
 ) -> list[CredentialListItem]:
-    workflow = session.get(Workflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(404, detail="workflow not found")
+    _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
     links = session.exec(
         select(WorkflowCredential).where(
             WorkflowCredential.workflow_id == workflow_id
@@ -286,13 +427,13 @@ def link_workflow_credential(
     workflow_id: str,
     body: WorkflowCredentialLinkRequest,
     session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
 ) -> CredentialListItem:
-    workflow = session.get(Workflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(404, detail="workflow not found")
+    workflow = _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
     cred = session.get(Credential, body.credential_id)
     if cred is None:
         raise HTTPException(404, detail="credential not found")
+    require_org_match(cred.org_id, ctx.org_id, session)
     existing = session.exec(
         select(WorkflowCredential).where(
             WorkflowCredential.workflow_id == workflow_id,
@@ -321,10 +462,9 @@ def unlink_workflow_credential(
     workflow_id: str,
     credential_id: str,
     session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
 ) -> Response:
-    workflow = session.get(Workflow, workflow_id)
-    if workflow is None:
-        raise HTTPException(404, detail="workflow not found")
+    workflow = _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
     link = session.exec(
         select(WorkflowCredential).where(
             WorkflowCredential.workflow_id == workflow_id,
@@ -338,6 +478,77 @@ def unlink_workflow_credential(
     session.add(workflow)
     session.commit()
     return Response(status_code=204)
+
+
+@router.post(
+    "/{workflow_id}/input-files",
+    response_model=StagingFileOut,
+)
+async def upload_run_input_file(
+    workflow_id: str,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> StagingFileOut:
+    _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
+    filename = file.filename or "upload.bin"
+    try:
+        data = await file.read()
+        meta = run_input_svc.store_staging_file(
+            workflow_id,
+            data,
+            filename=filename,
+            content_type=file.content_type,
+        )
+    except run_input_svc.RunInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return StagingFileOut.model_validate(meta)
+
+
+@router.get("/{workflow_id}/last-output-shapes", response_model=LastOutputShapesResponse)
+def get_last_output_shapes(
+    workflow_id: str,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> LastOutputShapesResponse:
+    _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
+
+    from app.services.last_output_shapes import fetch_last_output_shapes
+
+    data = fetch_last_output_shapes(session, workflow_id)
+    return LastOutputShapesResponse(
+        run_id=data.run_id,
+        started_at=data.started_at,
+        shapes=data.shapes,
+    )
+
+
+@router.get("/{workflow_id}/selector-cache", response_model=SelectorCacheStatsOut)
+def get_selector_cache_stats(
+    workflow_id: str,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> SelectorCacheStatsOut:
+    _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
+    stats = cache_svc.get_cache_stats(session, workflow_id)
+    return SelectorCacheStatsOut(
+        workflow_id=stats.workflow_id,
+        entry_count=stats.entry_count,
+        total_hits=stats.total_hits,
+        total_misses=stats.total_misses,
+        entries=stats.entries,
+    )
+
+
+@router.delete("/{workflow_id}/selector-cache")
+def clear_selector_cache(
+    workflow_id: str,
+    session: Session = Depends(get_session),
+    ctx: AuthContext = Depends(get_org_context),
+) -> dict:
+    _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
+    removed = cache_svc.clear_workflow_cache(session, workflow_id)
+    return {"ok": True, "removed": removed}
 
 
 __all__ = ["router"]

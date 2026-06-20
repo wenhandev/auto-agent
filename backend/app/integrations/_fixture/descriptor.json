@@ -1,0 +1,143 @@
+{
+  "app": "_fixture",
+  "version": "1.0.0",
+  "credentials": ["fixture_api_key"],
+  "resources": [
+    {
+      "name": "records",
+      "label": "Records",
+      "operations": [
+        {
+          "name": "list",
+          "label": "List Records",
+          "fields": [
+            {
+              "name": "limit",
+              "label": "Limit",
+              "kind": "number",
+              "required": false,
+              "default": 10
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "https://api.fixture.example.com/v1/records",
+            "query": {
+              "limit": "{{$fields.limit}}"
+            }
+          },
+          "response": {
+            "item_path": "data",
+            "pagination": {
+              "type": "cursor",
+              "cursor_path": "next_cursor",
+              "cursor_param": "cursor",
+              "page_size": 10,
+              "max_pages": 5
+            }
+          }
+        },
+        {
+          "name": "get",
+          "label": "Get Record",
+          "fields": [
+            {
+              "name": "id",
+              "label": "ID",
+              "kind": "string",
+              "required": true
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "https://api.fixture.example.com/v1/records/{{$fields.id}}"
+          },
+          "response": {
+            "root_path": "data"
+          }
+        }
+      ]
+    },
+    {
+      "name": "events",
+      "label": "Events",
+      "operations": [
+        {
+          "name": "subscribe",
+          "label": "Subscribe",
+          "fields": [
+            {
+              "name": "callback_url",
+              "label": "Callback URL",
+              "kind": "string",
+              "required": true
+            },
+            {
+              "name": "secret",
+              "label": "Secret",
+              "kind": "string",
+              "required": true
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://api.fixture.example.com/v1/hooks",
+            "body": {
+              "url": "{{$fields.callback_url}}",
+              "secret": "{{$fields.secret}}"
+            }
+          },
+          "response": {
+            "root_path": "data"
+          }
+        },
+        {
+          "name": "unsubscribe",
+          "label": "Unsubscribe",
+          "fields": [
+            {
+              "name": "subscription_id",
+              "label": "Subscription ID",
+              "kind": "string",
+              "required": true
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "https://api.fixture.example.com/v1/hooks/{{$fields.subscription_id}}"
+          },
+          "response": {
+            "root_path": "data"
+          }
+        }
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "name": "record_poll",
+      "label": "New Record",
+      "kind": "poll",
+      "resource": "records",
+      "list_operation": "list",
+      "dedup_path": "id",
+      "item_path": "data"
+    },
+    {
+      "name": "event_webhook",
+      "label": "Event Webhook",
+      "kind": "webhook",
+      "resource": "events",
+      "subscribe_operation": "subscribe",
+      "unsubscribe_operation": "unsubscribe",
+      "event_item_path": "event",
+      "verification": {
+        "type": "hmac",
+        "header": "X-Fixture-Signature",
+        "algorithm": "sha256",
+        "challenge_field": "challenge",
+        "event_id_path": "event_id"
+      }
+    }
+  ]
+}

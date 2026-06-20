@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@xyflow/react/dist/style.css";
 
 import { App } from "./App";
+import { AuthProvider } from "./auth/useAuth";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "./components/ui/sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -33,7 +34,9 @@ ReactDOM.createRoot(rootEl).render(
       <QueryClientProvider client={queryClient}>
         <TooltipProvider delayDuration={200}>
           <BrowserRouter>
-            <App />
+            <AuthProvider>
+              <App />
+            </AuthProvider>
           </BrowserRouter>
           <Toaster />
         </TooltipProvider>

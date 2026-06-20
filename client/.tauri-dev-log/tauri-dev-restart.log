@@ -1,0 +1,78 @@
+
+> auto-agent-desktop@0.1.0 tauri:dev
+> tauri dev
+
+     Running BeforeDevCommand (`npm run dev`)
+
+> auto-agent-desktop@0.1.0 dev
+> vite
+
+
+  VITE v8.0.16  ready in 132 ms
+
+  ➜  Local:   http://localhost:1420/
+  ➜  Network: use --host to expose
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching /Users/wenhanjiang/Desktop/auto_agent/desktop/src-tauri for changes...
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 0.26s
+[1m[92m     Running[0m `target/debug/auto-agent-desktop`
+
+thread 'main' (29317744) panicked at /Users/wenhanjiang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.11.3/src/app.rs:1425:11:
+Failed to setup app: error encountered during setup hook: failed to spawn local cloud (backend/.venv/bin/python -m uvicorn): No such file or directory (os error 2)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'main' (29317744) panicked at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/panicking.rs:225:5:
+panic in a function that cannot unwind
+stack backtrace:
+   0:        0x102a7d480 - std[7d7552da0923e8b2]::backtrace_rs::backtrace::libunwind::trace
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/../../backtrace/src/backtrace/libunwind.rs:117:9
+   1:        0x102a7d480 - std[7d7552da0923e8b2]::backtrace_rs::backtrace::trace_unsynchronized::<std[7d7552da0923e8b2]::sys::backtrace::_print_fmt::{closure#1}>
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/../../backtrace/src/backtrace/mod.rs:66:14
+   2:        0x102a7d480 - std[7d7552da0923e8b2]::sys::backtrace::_print_fmt
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/sys/backtrace.rs:74:9
+   3:        0x102a7d480 - <<std[7d7552da0923e8b2]::sys::backtrace::BacktraceLock>::print::DisplayBacktrace as core[4b39a0a778b8475a]::fmt::Display>::fmt
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/sys/backtrace.rs:44:26
+   4:        0x102a91400 - <core[4b39a0a778b8475a]::fmt::rt::Argument>::fmt
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/fmt/rt.rs:152:76
+   5:        0x102a91400 - core[4b39a0a778b8475a]::fmt::write
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/fmt/mod.rs:1687:22
+   6:        0x102a81660 - std[7d7552da0923e8b2]::io::default_write_fmt::<std[7d7552da0923e8b2]::sys::stdio::unix::Stderr>
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/io/mod.rs:621:11
+   7:        0x102a81660 - <std[7d7552da0923e8b2]::sys::stdio::unix::Stderr as std[7d7552da0923e8b2]::io::Write>::write_fmt
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/io/mod.rs:1976:13
+   8:        0x102a64b18 - <std[7d7552da0923e8b2]::sys::backtrace::BacktraceLock>::print
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/sys/backtrace.rs:47:25
+   9:        0x102a64b18 - std[7d7552da0923e8b2]::panicking::default_hook::{closure#0}
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/panicking.rs:292:27
+  10:        0x102a7720c - std[7d7552da0923e8b2]::panicking::default_hook
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/panicking.rs:319:9
+  11:        0x102a77534 - std[7d7552da0923e8b2]::panicking::panic_with_hook
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/panicking.rs:825:13
+  12:        0x102a64bf0 - std[7d7552da0923e8b2]::panicking::panic_handler::{closure#0}
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/panicking.rs:691:13
+  13:        0x102a5a108 - std[7d7552da0923e8b2]::sys::backtrace::__rust_end_short_backtrace::<std[7d7552da0923e8b2]::panicking::panic_handler::{closure#0}, !>
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/sys/backtrace.rs:182:18
+  14:        0x102a6533c - __rustc[8068f81614cfe5c]::rust_begin_unwind
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/std/src/panicking.rs:689:5
+  15:        0x102ab7598 - core[4b39a0a778b8475a]::panicking::panic_nounwind_fmt::runtime
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/panicking.rs:122:22
+  16:        0x102ab7598 - core[4b39a0a778b8475a]::panicking::panic_nounwind_fmt
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/intrinsics/mod.rs:2448:9
+  17:        0x102ab7520 - core[4b39a0a778b8475a]::panicking::panic_nounwind
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/panicking.rs:225:5
+  18:        0x102ab7674 - core[4b39a0a778b8475a]::panicking::panic_cannot_unwind
+                               at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/panicking.rs:337:5
+  19:        0x10271c43c - tao::platform_impl::platform::app_delegate::did_finish_launching::hafede6d4850dc2a3
+                               at /Users/wenhanjiang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tao-0.35.3/src/platform_impl/macos/app_delegate.rs:125:1
+  20:        0x18c1a964c - <unknown>
+  21:        0x18c235abc - <unknown>
+  22:        0x18c235a00 - <unknown>
+  23:        0x18c178170 - <unknown>
+  24:        0x18d9ac4a4 - <unknown>
+  25:        0x1905e75e8 - <unknown>
+  26:        0x1905e7380 - <unknown>
+  27:        0x1905e59c4 - <unknown>
+  28:        0x1905e55d8 - <unknown>
+  29:        0x18d9d4fbc - <unknown>
+  30:        0x18d9d4db4 - <unknown>
+thread caused non-unwinding panic. aborting.

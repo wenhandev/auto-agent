@@ -1,54 +1,54 @@
 ## 1. Shared contract (parent worker)
 
-- [ ] 1.1 `[shared-contract]` Extend `backend/app/schemas.py`:
+- [x] 1.1 `[shared-contract]` Extend `backend/app/schemas.py`:
   - new `RetryPolicy(BaseModel)` with `max_attempts: int = Field(ge=1, le=10)` and `backoff_ms: int = Field(ge=0, le=60_000)`;
   - `Node.retry: Optional[RetryPolicy] = None`;
   - `Node.on_error: Literal["fail_run","continue","branch"] = "fail_run"`;
   - `Edge.kind: Literal["next","on_error"] = "next"`.
-- [ ] 1.2 `[shared-contract]` Extend `backend/app/schemas_api.py`:
+- [x] 1.2 `[shared-contract]` Extend `backend/app/schemas_api.py`:
   - event-type literal union to include `"node_retry"` AND `"run_completed_with_errors"`;
   - add `NodeRetryPayload(BaseModel)` with `attempt: int`, `error: str`, `error_kind: str`, `next_attempt_at: datetime`;
   - add `RunCompletedWithErrorsPayload(BaseModel)` with `failed_node_count: int`, `failed_node_ids: list[str]`;
   - update `WSEvent` discriminated union accordingly;
   - extend the `RunStatus` Pydantic literal to include `"completed_with_errors"` (cross-change augmentation of `auto-agent-platform`'s `workflow-persistence` / `run-history` capabilities; no DB ALTER required because `Run.status` is a `TEXT` column).
-- [ ] 1.3 `[shared-contract]` Mirror TS types in `frontend/src/types.ts` (`RetryPolicy`, extended `Node` and `Edge`) and in `frontend/src/types-platform.ts` (`NodeRetryPayload`, `RunEventType` union grows, `RunStatus` union grows by `"completed_with_errors"`).
-- [ ] 1.4 `[shared-contract]` Smoke-check: `python -c "from app.schemas import Workflow, Edge, Node; assert Edge.model_fields['kind'].default == 'next'; assert Node.model_fields['on_error'].default == 'fail_run'; print('ok')"` and `cd frontend && npx tsc --noEmit` pass.
+- [x] 1.3 `[shared-contract]` Mirror TS types in `frontend/src/types.ts` (`RetryPolicy`, extended `Node` and `Edge`) and in `frontend/src/types-platform.ts` (`NodeRetryPayload`, `RunEventType` union grows, `RunStatus` union grows by `"completed_with_errors"`).
+- [x] 1.4 `[shared-contract]` Smoke-check: `python -c "from app.schemas import Workflow, Edge, Node; assert Edge.model_fields['kind'].default == 'next'; assert Node.model_fields['on_error'].default == 'fail_run'; print('ok')"` and `cd frontend && npx tsc --noEmit` pass.
 
 ## 2. Backend executor (Sibling A — `[backend-runtime]`)
 
-- [ ] 2.1 Refactor `backend/app/executor.py::run_workflow` to extract the per-node action invocation into a `_run_node(node, context, session, ...) -> NodeOutcome` helper. `NodeOutcome` is a small dataclass `{kind: "completed"|"failed", output: dict|None, error: BaseException|None, attempts: int}`. The helper SHALL resolve `node.params` via `variable_interpolation.resolve_params(...)` EXACTLY ONCE before the retry loop and cache the resolved dict for all attempts (per design Decision 11).
-- [ ] 2.2 Implement the retry loop inside `_run_node`:
+- [x] 2.1 Refactor `backend/app/executor.py::run_workflow` to extract the per-node action invocation into a `_run_node(node, context, session, ...) -> NodeOutcome` helper. `NodeOutcome` is a small dataclass `{kind: "completed"|"failed", output: dict|None, error: BaseException|None, attempts: int}`. The helper SHALL resolve `node.params` via `variable_interpolation.resolve_params(...)` EXACTLY ONCE before the retry loop and cache the resolved dict for all attempts (per design Decision 11).
+- [x] 2.2 Implement the retry loop inside `_run_node`:
   - if `node.retry is None`: run once, no retry events;
   - else: loop `i` in `1..node.retry.max_attempts`; every attempt invokes `action_fn(**cached_resolved_params)` — DO NOT re-resolve `params` between attempts (per design Decision 11);
   - on failure and `i < max_attempts`, emit `node_retry` with `attempt=i`, `error=str(exc)`, `error_kind=type(exc).__name__`, `next_attempt_at=now+timedelta(ms=node.retry.backoff_ms*i)`, then `await asyncio.sleep(node.retry.backoff_ms*i/1000)`; check abort flag both before the sleep and after.
-- [ ] 2.3 Implement on-error routing in `run_workflow`'s outer loop:
+- [x] 2.3 Implement on-error routing in `run_workflow`'s outer loop:
   - `outcome.kind == "completed"` → existing path; emit `node_completed` (now carries `attempt=outcome.attempts`); add `context[node.id] = outcome.output`; pick next via `kind="next"` edge using existing condition logic;
   - `outcome.kind == "failed"` → emit `node_failed` (carries `attempt=outcome.attempts`, `error_kind`); set a per-run flag `had_tolerated_failure = True` whenever `on_error` is `"continue"` or `"branch"` AND the branch is taken successfully (per Decision 12); branch on `node.on_error`:
     - `"fail_run"`: emit `run_failed`, stop traversal with terminal status `failed`;
     - `"continue"`: add `context[node.id] = {"error":{...}}` per design Decision 8; pick next via `kind="next"` edge;
     - `"branch"`: pick FIRST outgoing edge with `kind="on_error"`; if absent, fall back to `"fail_run"` with the appended note in `error`.
-- [ ] 2.3a When the run reaches its end node naturally (no `run_failed`, no `run_aborted`), set the terminal `Run.status` to `"completed_with_errors"` if `had_tolerated_failure` is `True`, otherwise `"completed"`. Emit the matching `run_completed_with_errors` or `run_completed` event (the existing event-type set is extended by `run_completed_with_errors` — add to §1.2's event-type union).
-- [ ] 2.4 Update `backend/app/services/runs.py` event persistence — accept `node_retry` events; persist with `event_type="node_retry"` and the payload dict unchanged.
-- [ ] 2.5 Update `backend/app/agents/editor.py` system prompt with the paragraph from design Decision 10.
-- [ ] 2.6 Update `backend/app/agents/planner.py` system prompt with the same paragraph plus a one-line example.
-- [ ] 2.7 Add unit tests `backend/tests/test_executor_retry.py`:
+- [x] 2.3a When the run reaches its end node naturally (no `run_failed`, no `run_aborted`), set the terminal `Run.status` to `"completed_with_errors"` if `had_tolerated_failure` is `True`, otherwise `"completed"`. Emit the matching `run_completed_with_errors` or `run_completed` event (the existing event-type set is extended by `run_completed_with_errors` — add to §1.2's event-type union).
+- [x] 2.4 Update `backend/app/services/runs.py` event persistence — accept `node_retry` events; persist with `event_type="node_retry"` and the payload dict unchanged.
+- [x] 2.5 Update `backend/app/agents/editor.py` system prompt with the paragraph from design Decision 10.
+- [x] 2.6 Update `backend/app/agents/planner.py` system prompt with the same paragraph plus a one-line example.
+- [x] 2.7 Add unit tests `backend/tests/test_executor_retry.py`:
   - no retry → one attempt, no `node_retry` events emitted (today's behaviour);
   - retry succeeds on 2nd attempt → one `node_retry` event with `attempt=1`, one `node_completed` with `attempt=2`;
   - retry exhausts all attempts → `max_attempts-1` `node_retry` events, one `node_failed` with `attempt=max_attempts`;
   - retry interleaves abort: abort flag set during the inter-attempt sleep cancels the loop and emits `run_aborted` instead of `node_retry/node_failed`;
   - **first-attempt resolution lock (Decision 11)**: a node whose `params` reference `{{nodes.x.output.v}}` whose underlying context entry is mutated between attempts (e.g. by a test fixture monkey-patching the context dict) SHALL still receive the attempt-1 resolved value on attempt 2; re-resolution SHALL NOT occur.
-- [ ] 2.8 Add unit tests `backend/tests/test_executor_on_error.py`:
+- [x] 2.8 Add unit tests `backend/tests/test_executor_on_error.py`:
   - `fail_run` default behaviour unchanged;
   - `continue` adds `{"error":{...}}` to context and follows `kind="next"` edge;
   - `branch` with a matching `kind="on_error"` edge follows it; without one, degrades to `fail_run` with the explanatory note in `error`;
   - **terminal status `completed_with_errors` (Decision 12)**: a run with one `on_error="continue"` failure that reaches its end node terminates with `Run.status="completed_with_errors"` AND emits `run_completed_with_errors` with `failed_node_count == 1`;
   - a run with NO `node_failed` events terminates with `Run.status="completed"` AND emits `run_completed` (unchanged from today).
-- [ ] 2.9 Smoke-check: `pytest backend/tests/test_executor_retry.py backend/tests/test_executor_on_error.py -v` passes.
+- [x] 2.9 Smoke-check: `pytest backend/tests/test_executor_retry.py backend/tests/test_executor_on_error.py -v` passes.
 
 ## 3. Frontend canvas + inspector + log (Sibling B — `[frontend]`)
 
-- [ ] 3.1 Update the canvas edge renderer (semantic role — the existing component that styles workflow edges) to read `edge.kind` and render `kind="on_error"` with `stroke-dasharray: 6 4` and the error-color stroke from the theme tokens. Hover tooltip `"失败时跳转到 <target.label>"`.
-- [ ] 3.2 Update the NodeInspector — add a "错误处理" section per design Decision 9:
+- [x] 3.1 Update the canvas edge renderer (semantic role — the existing component that styles workflow edges) to read `edge.kind` and render `kind="on_error"` with `stroke-dasharray: 6 4` and the error-color stroke from the theme tokens. Hover tooltip `"失败时跳转到 <target.label>"`.
+- [x] 3.2 Update the NodeInspector — add a "错误处理" section per design Decision 9:
   - `重试次数` numeric input (1–10);
   - `重试间隔 (ms)` numeric input (0–60000), disabled when 重试次数 is empty;
   - `失败策略` segmented control with the three options; show the dashed-red-edge hint when `走错误分支` is selected;
@@ -56,7 +56,7 @@
 - [ ] 3.3 Update the RunLog (semantic role — the existing component that renders the live event stream) to recognise `node_retry` events and nest them under the parent node's row. Collapsed by default; chevron expands to show each attempt's `error` and `next_attempt_at`. Style: muted grey text with the retry icon.
 - [ ] 3.4 Update the RunReplay player to compress `node_retry` event sleep timing to 0 (same rule as `wait` node delays). Re-emit the event to the canvas / log so the visual nesting still appears.
 - [ ] 3.5 Update the editor's patch-preview component (the chat-panel-side renderer for `update_node` ops) to also render `retry` / `on_error` changes succinctly (`~ node n4.on_error: fail_run → branch`).
-- [ ] 3.5a Update the runs-list page (semantic role) to render `completed_with_errors` as an amber/warning pill distinct from green `completed` and red `failed`. Hovering the pill SHALL show the `failed_node_count` from the `run_completed_with_errors` payload (fetched from the run's last event if not already on the list response).
+- [x] 3.5a Update the runs-list page (semantic role) to render `completed_with_errors` as an amber/warning pill distinct from green `completed` and red `failed`. Hovering the pill SHALL show the `failed_node_count` from the `run_completed_with_errors` payload (fetched from the run's last event if not already on the list response).
 - [ ] 3.6 Smoke-check: `pnpm build` clean; `tsc --noEmit` clean.
 
 ## 4. Verification (parent worker)

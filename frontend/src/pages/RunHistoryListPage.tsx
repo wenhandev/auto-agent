@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { statusBadgeVariant } from "@/lib/status";
+import { isTechnicalError, userFacingFailureMessage } from "@/lib/userFacingError";
 
 function formatDuration(ms: number | null): string {
   if (ms === null || ms === undefined) return "\u2014";
@@ -98,13 +99,77 @@ export function RunHistoryListPage() {
                     onClick={() => navigate(routePath.runReplay(row.id))}
                   >
                     <TableCell className="font-medium">
-                      {row.workflow_name}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span>{row.workflow_name}</span>
+                        {row.mode === "autonomous" && (
+                          <Badge variant="outline">
+                            {t("pages.runHistory.pills.autonomous")}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell>v{row.version_index}</TableCell>
                     <TableCell>
-                      <Badge variant={statusBadgeVariant(row.status)}>
-                        {t(`status.${row.status}`, row.status)}
-                      </Badge>
+                      {row.mode === "autonomous" ? "—" : `v${row.version_index}`}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {row.pending_approval ? (
+                          <>
+                            <Badge variant={statusBadgeVariant(row.status)}>
+                              {t(`status.${row.status}`, row.status)}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className="border-violet-500/50 text-violet-400"
+                            >
+                              {t("pages.runHistory.pills.pendingApproval")}
+                            </Badge>
+                          </>
+                        ) : row.status === "completed_with_errors" ? (
+                          <Badge variant="warning">
+                            {t("pages.runHistory.pills.completedWithErrors")}
+                          </Badge>
+                        ) : row.status === "rejected" ? (
+                          <Badge
+                            variant="outline"
+                            className="border-orange-500/50 text-orange-400"
+                          >
+                            {t("pages.runHistory.pills.rejected")}
+                          </Badge>
+                        ) : (
+                          <Badge variant={statusBadgeVariant(row.status)}>
+                            {t(`status.${row.status}`, row.status)}
+                          </Badge>
+                        )}
+                        {row.execution_mode === "worker" && (
+                          <Badge variant="outline">
+                            {t("pages.runHistory.pills.worker")}
+                          </Badge>
+                        )}
+                        {row.queue_reason && (
+                          <Badge variant="secondary">
+                            {t(`pages.runHistory.queueReason.${row.queue_reason}`, row.queue_reason)}
+                          </Badge>
+                        )}
+                        {row.worker_name && (
+                          <span className="text-xs text-muted-foreground">
+                            {row.worker_name}
+                          </span>
+                        )}
+                      </div>
+                      {row.error_summary && (
+                        <p
+                          className="mt-1 max-w-md truncate text-xs text-destructive"
+                          title={row.error_summary}
+                        >
+                          {isTechnicalError(row.error_summary)
+                            ? userFacingFailureMessage({
+                                error: row.error_summary,
+                                fallbackGeneric: true,
+                              })
+                            : row.error_summary}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell>{formatTime(row.queued_at)}</TableCell>
                     <TableCell>{formatTime(row.finished_at)}</TableCell>

@@ -30,7 +30,8 @@ from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.adk.tools import FunctionTool
 from google.genai import types
 
-from app.agents.model import get_adk_model
+from app.agents.model import get_adk_model, get_genai_model_id
+from app.services import llm_traces as trace_svc
 
 
 logger = logging.getLogger(__name__)
@@ -67,17 +68,20 @@ def _truncate_ax(text: str) -> str:
 
 async def _accessibility_text(page: Any) -> str:
     try:
-        snapshot = await page.accessibility.snapshot()
+        if hasattr(page, "aria_snapshot"):
+            yaml_text = page.aria_snapshot()
+            if hasattr(yaml_text, "__await__"):
+                yaml_text = await yaml_text
+            if isinstance(yaml_text, str) and yaml_text.strip():
+                return _truncate_ax(yaml_text)
+        if hasattr(page, "accessibility"):
+            snapshot = await page.accessibility.snapshot()
+            if snapshot:
+                return _truncate_ax(
+                    json.dumps(snapshot, ensure_ascii=False, default=str)
+                )
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning("selector_finder: ax snapshot failed (%s)", exc)
-        snapshot = None
-    if snapshot:
-        try:
-            return _truncate_ax(
-                json.dumps(snapshot, ensure_ascii=False, default=str)
-            )
-        except Exception:
-            pass
     try:
         text = await page.locator("body").inner_text()
     except Exception:
@@ -86,6 +90,10 @@ async def _accessibility_text(page: Any) -> str:
 
 
 async def _grab_screenshot(page: Any) -> Optional[bytes]:
+    from app.services.browser_visual import skip_optional_page_screenshots
+
+    if skip_optional_page_screenshots():
+        return None
     try:
         password_locator = page.locator('input[type="password"]')
         return await page.screenshot(
@@ -176,28 +184,49 @@ async def _run_agent(
     message = types.Content(role="user", parts=parts)
 
     usage = {"input_tokens": None, "output_tokens": None}
+    response_text = ""
 
     try:
-        async for event in runner.run_async(
-            user_id=user_id, session_id=session_id, new_message=message
-        ):
-            meta = getattr(event, "usage_metadata", None)
-            if meta is not None:
-                pt = getattr(meta, "prompt_token_count", None)
-                ct = getattr(meta, "candidates_token_count", None)
-                if isinstance(pt, int):
-                    usage["input_tokens"] = (usage["input_tokens"] or 0) + pt
-                if isinstance(ct, int):
-                    usage["output_tokens"] = (usage["output_tokens"] or 0) + ct
-            if captured.get("selector") and event.is_final_response():
-                break
-            if event.is_final_response():
-                break
+        with trace_svc.LlmCallTracer() as tracer:
+            async for event in runner.run_async(
+                user_id=user_id, session_id=session_id, new_message=message
+            ):
+                meta = getattr(event, "usage_metadata", None)
+                if meta is not None:
+                    pt = getattr(meta, "prompt_token_count", None)
+                    ct = getattr(meta, "candidates_token_count", None)
+                    if isinstance(pt, int):
+                        usage["input_tokens"] = (usage["input_tokens"] or 0) + pt
+                    if isinstance(ct, int):
+                        usage["output_tokens"] = (usage["output_tokens"] or 0) + ct
+                if event.content and event.content.parts:
+                    for part in event.content.parts:
+                        text = getattr(part, "text", None)
+                        if isinstance(text, str) and text.strip():
+                            response_text = text.strip()
+                if captured.get("selector") and event.is_final_response():
+                    break
+                if event.is_final_response():
+                    break
     except Exception as exc:
         logger.warning("selector_finder: runner failed (%s)", exc)
         return _failure_result(
             mode=mode, reasoning=f"agent error: {exc}"
         )
+
+    trace_messages: list[Any] = [{"role": "user", "content": user_prompt}]
+    if mode == "vision" and screenshot is not None:
+        trace_messages[0]["attachments"] = ["image/png"]
+    trace_svc.record_llm_trace(
+        model=get_genai_model_id(),
+        system=SELECTOR_FINDER_INSTRUCTION,
+        messages=trace_messages,
+        response=response_text or captured.get("reasoning"),
+        input_tokens=usage["input_tokens"],
+        output_tokens=usage["output_tokens"],
+        latency_ms=tracer.latency_ms,
+        vision=(mode == "vision"),
+    )
 
     cost_hint = {
         "input_tokens": usage["input_tokens"],

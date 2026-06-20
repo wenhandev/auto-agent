@@ -7,6 +7,9 @@ from google.genai import types
 from playwright.async_api import Page
 
 from app.agents.model import get_genai_client, get_genai_model_id
+from app.services import artifact_context
+from app.services import cost_tracking as cost_svc
+from app.services import llm_traces as trace_svc
 
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,10 @@ async def _collect_page_text(page: Page) -> str:
 
 
 async def _grab_screenshot(page: Page) -> Optional[bytes]:
+    from app.services.browser_visual import skip_optional_page_screenshots
+
+    if skip_optional_page_screenshots():
+        return None
     try:
         return await page.screenshot(full_page=False)
     except Exception as exc:
@@ -70,15 +77,64 @@ async def _call_with_vision(
     ]
     contents = [types.Content(role="user", parts=parts)]
     config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-    return await client.aio.models.generate_content(
-        model=model_id, contents=contents, config=config
+    with trace_svc.LlmCallTracer() as tracer:
+        response = await client.aio.models.generate_content(
+            model=model_id, contents=contents, config=config
+        )
+    _record_extractor_trace(
+        model_id=model_id,
+        user_prompt=user_prompt,
+        response=response,
+        latency_ms=tracer.latency_ms,
+        vision=True,
     )
+    return response
 
 
 async def _call_text_only(client: Any, model_id: str, user_prompt: str) -> Any:
     config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-    return await client.aio.models.generate_content(
-        model=model_id, contents=user_prompt, config=config
+    with trace_svc.LlmCallTracer() as tracer:
+        response = await client.aio.models.generate_content(
+            model=model_id, contents=user_prompt, config=config
+        )
+    _record_extractor_trace(
+        model_id=model_id,
+        user_prompt=user_prompt,
+        response=response,
+        latency_ms=tracer.latency_ms,
+        vision=False,
+    )
+    return response
+
+
+def _record_extractor_trace(
+    *,
+    model_id: str,
+    user_prompt: str,
+    response: Any,
+    latency_ms: Optional[int],
+    vision: bool,
+) -> None:
+    if not artifact_context.get_run_id():
+        return
+    usage = cost_svc.usage_from_genai_response(response)
+    text = _extract_response_text(response)
+    trace_svc.record_llm_trace(
+        model=model_id,
+        system=_SYSTEM_INSTRUCTION,
+        messages=[{"role": "user", "content": user_prompt}],
+        response=text or None,
+        input_tokens=usage.get("input_tokens"),
+        output_tokens=usage.get("output_tokens"),
+        latency_ms=latency_ms,
+        vision=vision,
+    )
+    cost_svc.record_llm_usage(
+        artifact_context.get_run_id() or "",
+        model=model_id,
+        input_tokens=usage.get("input_tokens"),
+        output_tokens=usage.get("output_tokens"),
+        node_id=artifact_context.get_node_id(),
     )
 
 

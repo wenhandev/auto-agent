@@ -1,0 +1,25 @@
+{
+  "append_success": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "spreadsheetId": "sheet-123",
+      "updates": {
+        "spreadsheetId": "sheet-123",
+        "updatedRange": "Data!A2:B3",
+        "updatedRows": 2,
+        "updatedColumns": 2,
+        "updatedCells": 4
+      }
+    }
+  },
+  "get_matrix": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "range": "Data!A1:B3",
+      "majorDimension": "ROWS",
+      "values": [["name", "age"], ["a", "1"], ["b", "2"]]
+    }
+  }
+}

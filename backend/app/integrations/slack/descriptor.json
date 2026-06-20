@@ -1,0 +1,191 @@
+{
+  "app": "slack",
+  "version": "1.0.0",
+  "credentials": ["slack_oauth2"],
+  "resources": [
+    {
+      "name": "chat",
+      "label": "Chat",
+      "operations": [
+        {
+          "name": "postMessage",
+          "label": "Post Message",
+          "fields": [
+            {"name": "channel", "label": "Channel", "kind": "string", "required": true},
+            {"name": "text", "label": "Text", "kind": "string", "required": true}
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://slack.com/api/chat.postMessage",
+            "headers": {"Content-Type": "application/json; charset=utf-8"},
+            "body": {
+              "channel": "{{$fields.channel}}",
+              "text": "{{$fields.text}}"
+            }
+          },
+          "response": {"root_path": "message"}
+        }
+      ]
+    },
+    {
+      "name": "conversations",
+      "label": "Conversations",
+      "operations": [
+        {
+          "name": "list",
+          "label": "List Channels",
+          "fields": [
+            {
+              "name": "types",
+              "label": "Types",
+              "kind": "string",
+              "required": false,
+              "default": "public_channel,private_channel"
+            },
+            {
+              "name": "limit",
+              "label": "Limit",
+              "kind": "number",
+              "required": false,
+              "default": 100
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://slack.com/api/conversations.list",
+            "headers": {"Content-Type": "application/json; charset=utf-8"},
+            "body": {
+              "types": "{{$fields.types}}",
+              "limit": "{{$fields.limit}}"
+            }
+          },
+          "response": {
+            "item_path": "channels",
+            "pagination": {
+              "type": "cursor",
+              "cursor_path": "response_metadata.next_cursor",
+              "cursor_param": "cursor",
+              "cursor_location": "body",
+              "page_size": 100,
+              "max_pages": 10
+            }
+          }
+        },
+        {
+          "name": "history",
+          "label": "Channel History",
+          "fields": [
+            {"name": "channel", "label": "Channel", "kind": "string", "required": true},
+            {
+              "name": "limit",
+              "label": "Limit",
+              "kind": "number",
+              "required": false,
+              "default": 100
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://slack.com/api/conversations.history",
+            "headers": {"Content-Type": "application/json; charset=utf-8"},
+            "body": {
+              "channel": "{{$fields.channel}}",
+              "limit": "{{$fields.limit}}"
+            }
+          },
+          "response": {
+            "item_path": "messages",
+            "pagination": {
+              "type": "cursor",
+              "cursor_path": "response_metadata.next_cursor",
+              "cursor_param": "cursor",
+              "cursor_location": "body",
+              "page_size": 100,
+              "max_pages": 10
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "users",
+      "label": "Users",
+      "operations": [
+        {
+          "name": "list",
+          "label": "List Users",
+          "fields": [
+            {
+              "name": "limit",
+              "label": "Limit",
+              "kind": "number",
+              "required": false,
+              "default": 100
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://slack.com/api/users.list",
+            "headers": {"Content-Type": "application/json; charset=utf-8"},
+            "body": {"limit": "{{$fields.limit}}"}
+          },
+          "response": {
+            "item_path": "members",
+            "pagination": {
+              "type": "cursor",
+              "cursor_path": "response_metadata.next_cursor",
+              "cursor_param": "cursor",
+              "cursor_location": "body",
+              "page_size": 100,
+              "max_pages": 10
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "files",
+      "label": "Files",
+      "operations": [
+        {
+          "name": "upload",
+          "label": "Upload File",
+          "fields": [
+            {"name": "channels", "label": "Channels", "kind": "string", "required": true},
+            {"name": "content", "label": "Content", "kind": "string", "required": true},
+            {"name": "filename", "label": "Filename", "kind": "string", "required": true},
+            {
+              "name": "title",
+              "label": "Title",
+              "kind": "string",
+              "required": false
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://slack.com/api/files.upload",
+            "body_type": "form",
+            "body": {
+              "channels": "{{$fields.channels}}",
+              "content": "{{$fields.content}}",
+              "filename": "{{$fields.filename}}",
+              "title": "{{$fields.title}}"
+            }
+          },
+          "response": {"root_path": "file"}
+        }
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "name": "channel_history_poll",
+      "label": "Poll Channel History",
+      "kind": "poll",
+      "resource": "conversations",
+      "list_operation": "history",
+      "dedup_path": "ts",
+      "item_path": "messages"
+    }
+  ]
+}

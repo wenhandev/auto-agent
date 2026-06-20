@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "default",
+  "description": "Default capabilities for Auto Agent desktop",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:tray:default",
+    "core:window:default"
+  ]
+}

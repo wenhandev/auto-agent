@@ -11,7 +11,7 @@ The token namespace is reserved: `nodes` for prior-node outputs (this change), `
 - **As an operator**, I want a missing path to fail the run immediately with an error message that names the broken token and shows me what the predecessor actually returned, so I can fix the token in one edit.
 - **As the editor LLM**, I want a single, documented token form so I can suggest it confidently in newly-generated workflows.
 
-## Functional requirements
+## ADDED Requirements
 
 ### Requirement: Token Form And Path Resolution
 

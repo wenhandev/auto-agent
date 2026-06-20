@@ -1,0 +1,951 @@
+
+> auto-agent-desktop@0.1.0 tauri:dev
+> tauri dev
+
+     Running BeforeDevCommand (`npm run dev`)
+
+> auto-agent-desktop@0.1.0 dev
+> vite
+
+
+  VITE v8.0.16  ready in 100 ms
+
+  ➜  Local:   http://localhost:1420/
+  ➜  Network: use --host to expose
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching /Users/wenhanjiang/Desktop/auto_agent/desktop/src-tauri for changes...
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+[1m[92m     Running[0m `target/debug/auto-agent-desktop`
+11:16:13 PM [vite] (client) [console.warn] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+11:16:13 PM [vite] (client) [console.warn] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+        Info File src-tauri/src/lib.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m   Compiling[0m auto-agent-desktop v0.1.0 (/Users/wenhanjiang/Desktop/auto_agent/desktop/src-tauri)
+[1m[96m    Building[0m [=======================> ] 341/343: auto-agent-desktop          11:21:30 PM [vite] (client) hmr update /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/App.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/DesktopAuthContext.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/LoginPage.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/OverviewPage.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/WorkflowsPage.tsx and 4 more
+11:21:32 PM [vite] (client) hmr update /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/App.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/DesktopAuthContext.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/LoginPage.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/OverviewPage.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/WorkflowsPage.tsx and 4 more
+11:21:32 PM [vite] (client) hmr update /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/App.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/globals.css
+[1m[96m    Building[0m [=======================> ] 342/343: auto-agent-desktop(bin)     11:21:32 PM [vite] (client) hmr update /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/App.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/globals.css
+[K[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 3.31s
+[1m[92m     Running[0m `target/debug/auto-agent-desktop`
+11:21:34 PM [vite] (client) [console.warn] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+11:21:34 PM [vite] (client) [console.warn] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+11:21:34 PM [vite] (client) [Unhandled error] ReferenceError: Can't find variable: waitForSidecarHealth
+ > ../frontend/src/desktop/App.tsx:28:30
+    26 |      setReady(false);
+    27 |      setFailed(false);
+    28 |      void waitForSidecarHealth(45_000, 500).then((ok) => {
+       |                                ^
+    29 |        if (cancelled) return;
+    30 |        setReady(ok);
+ > react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:26
+ > runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:21
+ > commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13250:16
+ > commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:36
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:42
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15719:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15719:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15719:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15719:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15719:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15719:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15477:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15719:12
+ > recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15440:12
+ > commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15520:12
+ > flushPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:18433:10
+ > node_modules/react-dom/cjs/react-dom-client.development.js:17923:34
+ > performWorkUntilDeadline node_modules/scheduler/cjs/scheduler.development.js:46:22
+
+11:21:34 PM [vite] (client) [console.warn] An error occurred in the <SidecarGate> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+11:21:34 PM [vite] (client) [Unhandled error] ReferenceError: Can't find variable: waitForSidecarHealth
+ > ../frontend/src/desktop/App.tsx:28:30
+    26 |      setReady(false);
+    27 |      setFailed(false);
+    28 |      void waitForSidecarHealth(45_000, 500).then((ok) => {
+       |                                ^
+    29 |        if (cancelled) return;
+    30 |        setReady(ok);
+ > react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:26
+ > runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:21
+ > commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13250:16
+ > commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:36
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15832:40
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15886:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15886:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15886:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15886:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15886:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15886:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15825:12
+ > recursivelyTraverseReconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15785:10
+ > reconnectPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:15886:12
+ > doubleInvokeEffectsOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:18703:34
+ > runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:21
+ > recursivelyTraverseAndDoubleInvokeEffectsInDEV node_modules/react-dom/cjs/react-dom-client.development.js:18668:18
+ > commitDoubleInvokeEffectsInDEV node_modules/react-dom/cjs/react-dom-client.development.js:18713:8
+ > flushPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:18439:39
+ > node_modules/react-dom/cjs/react-dom-client.development.js:17923:34
+ > performWorkUntilDeadline node_modules/scheduler/cjs/scheduler.development.js:46:22
+
+11:21:34 PM [vite] (client) [console.warn] An error occurred in the <SidecarGate> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+11:21:35 PM [vite] (client) hmr update /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/App.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/globals.css
+11:21:35 PM [vite] (client) [Unhandled error] ReferenceError: Can't find variable: SidecarGate
+ > DesktopRoutes ../frontend/src/desktop/App.tsx:105:8
+    103 |    return (
+    104 |      <SidecarGate>
+    105 |        <Routes>
+        |          ^
+    106 |          <Route path="/login" element={<DesktopLoginPage />} />
+    107 |          <Route path="/pending" element={<PendingAuthorizationPage />} />
+ > react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25904:29
+ > renderWithHooks node_modules/react-dom/cjs/react-dom-client.development.js:7662:40
+ > updateFunctionComponent node_modules/react-dom/cjs/react-dom-client.development.js:10167:8
+ > runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:21
+ > performUnitOfWork node_modules/react-dom/cjs/react-dom-client.development.js:17642:12
+ > workLoopSync node_modules/react-dom/cjs/react-dom-client.development.js:17469:58
+ > renderRootSync node_modules/react-dom/cjs/react-dom-client.development.js:17450:23
+ > performWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:16584:18
+ > performSyncWorkOnRoot node_modules/react-dom/cjs/react-dom-client.development.js:18972:24
+ > flushSyncWorkAcrossRoots_impl node_modules/react-dom/cjs/react-dom-client.development.js:18814:42
+ > flushSyncWork$1 node_modules/react-dom/cjs/react-dom-client.development.js:16898:41
+ > scheduleRoot node_modules/react-dom/cjs/react-dom-client.development.js:101:24
+ > ../../../../../@react-refresh:208:29
+ > performReactRefresh ../../../../../@react-refresh:190:32
+ > ../../../../../@react-refresh:604:22
+
+11:21:35 PM [vite] (client) [console.warn] An error occurred in the <DesktopRoutes> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+11:21:36 PM [vite] (client) hmr update /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/App.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/globals.css
+11:21:52 PM [vite] (client) [console.warn] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+11:21:52 PM [vite] (client) [console.warn] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+11:21:52 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:52 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:53 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:53 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:53 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:53 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:54 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:54 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:54 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:54 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:55 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:55 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:55 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:55 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:56 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:56 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:56 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:56 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:57 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:57 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:57 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:57 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:58 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:58 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:58 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:58 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:59 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:59 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:59 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:21:59 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:00 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:00 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:00 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:00 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:01 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:01 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:01 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:01 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:02 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:02 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:02 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:02 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:03 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:03 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:03 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:03 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:04 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:04 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:04 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:04 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:05 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:05 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:05 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:05 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:06 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:06 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:06 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:06 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:07 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:07 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:07 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:07 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:11 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:11 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:11 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:11 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:12 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:12 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:12 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:12 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:13 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:13 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:13 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:13 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:14 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:14 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:14 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:14 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:15 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:15 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:15 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:15 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:19 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:19 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:20 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:20 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:20 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:20 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:21 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:21 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:21 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:21 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:22 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:22 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:22 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:22 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:23 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:23 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:23 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:23 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:24 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:24 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:24 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:24 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:25 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:25 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:25 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:25 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:26 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:26 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:26 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:26 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:27 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:27 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:27 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:27 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:28 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:28 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:31 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:31 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:32 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:32 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:32 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:32 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:33 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:33 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:33 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:33 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:34 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:34 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:34 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:34 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:35 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:35 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:35 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:35 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:36 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:36 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:36 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:36 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:37 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:37 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:44 PM [vite] (client) hmr update /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/DesktopAuthContext.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/globals.css
+11:22:44 PM [vite] (client) hmr invalidate /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/DesktopAuthContext.tsx Could not Fast Refresh ("useDesktopAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+11:22:44 PM [vite] (client) hmr update /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/App.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/DesktopShell.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/LoginPage.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/PendingAuthorizationPage.tsx, /@fs/Users/wenhanjiang/Desktop/auto_agent/frontend/src/desktop/pages/SettingsPage.tsx
+11:22:44 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:44 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:44 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:44 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:45 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:45 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:45 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:45 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:46 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:46 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:46 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:46 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:47 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:47 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:47 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:47 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:48 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:48 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:48 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:48 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:49 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:49 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:49 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:49 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:50 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:50 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:50 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:50 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:51 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:51 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:51 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:51 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:52 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:52 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:52 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:52 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:53 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:53 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:53 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:53 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:54 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:54 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:54 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:54 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:55 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:55 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:55 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:55 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:56 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:56 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:56 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:56 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:57 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:57 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:57 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:57 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:58 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:58 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:58 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:58 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:59 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:59 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:59 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:22:59 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:00 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:00 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:00 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:00 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:01 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:01 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:01 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:01 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:02 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:02 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:02 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:02 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:03 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:03 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:04 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:04 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:04 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:04 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:05 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:05 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:05 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:05 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:06 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:06 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:06 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:06 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:07 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:07 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:07 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:07 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:08 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:08 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:08 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:08 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:09 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:09 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:09 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:09 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:10 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:10 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:10 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:10 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:11 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:11 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:11 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:11 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:12 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+11:23:12 PM [vite] http proxy error: /api/health
+Error: connect ECONNREFUSED 127.0.0.1:8001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)

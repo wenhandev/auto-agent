@@ -39,6 +39,17 @@ Thumbs.db
 
 # Migration markers (per-workflow-credentials)
 .cleared_credentials
+.parent_run_id_added
+
+# Workflow file sandbox
+backend/data/workflow_files/
+
+# Browser profile storage (encrypted storage_state snapshots)
+backend/data/profiles/
+
+# Run artifacts (screenshots, traces, recordings)
+backend/data/artifacts/
+backend/.vision_artifacts/
 
 # Playwright
 playwright-report/

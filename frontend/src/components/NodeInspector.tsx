@@ -4,7 +4,13 @@ import { useStore } from "@/store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { statusBadgeVariant } from "@/lib/status";
+import { AvailableVariablesTab } from "@/inspector/AvailableVariablesTab";
+import { ExpressionPreview } from "@/inspector/ExpressionPreview";
+import { NodeErrorHandlingSection } from "@/inspector/NodeErrorHandlingSection";
+import { NodeParamsEditor } from "@/inspector/NodeParamsEditor";
+import { OutgoingEdgesSection } from "@/inspector/OutgoingEdgesSection";
 
 function formatOutput(output: unknown): string {
   if (output === null || output === undefined) return "";
@@ -32,7 +38,7 @@ export function NodeInspector() {
   const status = state?.status ?? "idle";
 
   return (
-    <div className="absolute right-4 top-4 z-30 flex w-[340px] max-h-[80%] flex-col overflow-hidden rounded-lg border bg-card shadow-lg">
+    <div className="absolute right-4 top-4 z-30 flex w-[360px] max-h-[80%] flex-col overflow-hidden rounded-lg border bg-card shadow-lg">
       <div className="flex items-start gap-2 border-b px-3 py-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -68,30 +74,58 @@ export function NodeInspector() {
         )}
       </div>
       <Separator />
-      <div className="flex flex-col gap-2 overflow-auto p-3">
-        <div>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("nodeInspector.paramsTitle")}
-          </div>
-          <pre className="max-h-32 overflow-auto rounded-md border bg-muted/40 p-2 font-mono text-[11px] text-foreground">
-            {JSON.stringify(node.params ?? {}, null, 2)}
-          </pre>
-        </div>
-        <div>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("nodeInspector.outputTitle")}
-          </div>
-          {formatted ? (
-            <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-2 font-mono text-[11px] text-foreground">
-              {formatted}
-            </pre>
-          ) : (
-            <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-              {t("nodeInspector.noOutput")}
+      <Tabs defaultValue="properties" className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="mx-3 mt-2 h-8 w-auto justify-start">
+          <TabsTrigger value="properties" className="text-xs">
+            {t("nodeInspector.tabProperties")}
+          </TabsTrigger>
+          <TabsTrigger value="variables" className="text-xs">
+            {t("nodeInspector.tabVariables")}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent
+          value="properties"
+          className="mt-0 flex-1 overflow-auto px-3 pb-3 data-[state=inactive]:hidden"
+        >
+          <div className="flex flex-col gap-3 pt-2">
+            <div>
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("nodeInspector.paramsTitle")}
+              </div>
+              <NodeParamsEditor node={node} />
             </div>
-          )}
-        </div>
-      </div>
+            {node.type !== "start" && node.type !== "end" && (
+              <>
+                <NodeErrorHandlingSection node={node} />
+                <OutgoingEdgesSection nodeId={node.id} />
+              </>
+            )}
+            <div>
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("nodeInspector.outputTitle")}
+              </div>
+              {formatted ? (
+                <pre className="max-h-48 overflow-auto rounded-md border bg-muted/40 p-2 font-mono text-[11px] text-foreground">
+                  {formatted}
+                </pre>
+              ) : (
+                <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                  {t("nodeInspector.noOutput")}
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent
+          value="variables"
+          className="mt-0 flex-1 overflow-auto px-3 pb-3 data-[state=inactive]:hidden"
+        >
+          <div className="flex flex-col gap-3 pt-2">
+            <AvailableVariablesTab nodeId={node.id} />
+            <ExpressionPreview nodeId={node.id} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

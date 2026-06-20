@@ -26,6 +26,11 @@ from app.schemas import Node
 from app.services import llm_runtime
 
 
+@pytest.fixture(autouse=True)
+def _headless_for_self_heal_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.settings.settings.browser_headless", True)
+
+
 class _StubPage:
     async def screenshot(self, **_: Any) -> bytes:
         return b""

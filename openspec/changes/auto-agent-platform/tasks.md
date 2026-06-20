@@ -18,22 +18,22 @@ These tasks define the API and data shapes that all three siblings depend on. Th
 
 Owned by Sibling A. All under `backend/app/` except where noted.
 
-- [ ] 2.1 Add `sqlmodel` and `cryptography` to `backend/pyproject.toml`. Add `data/` to gitignore.
-- [ ] 2.2 Add `app/services/crypto.py` — Fernet key bootstrap (env / file / generate), `encrypt`, `decrypt`, masked helpers (`mask_secret`, `mask_api_key`).
-- [ ] 2.3 Add `app/services/llm_settings.py` — `effective_settings()`, `get_adk_model_cached()` (`lru_cache(maxsize=1)` keyed by fingerprint), `invalidate_model_cache()`. Make existing `app/agents/model.py::get_adk_model()` delegate here.
-- [ ] 2.4 Add `app/services/patch.py` — `apply_patch(current: Workflow, ops: list[PatchOp]) -> Workflow` with re-validation; raises `PatchValidationError` on any failure.
-- [ ] 2.5 Add `app/services/credentials.py` — `resolve_params(params, session)` interpolation pass for `{{cred.name.field}}` tokens; per-field merge for partial updates.
-- [ ] 2.6 Add `app/services/runs.py` — `create_queued_run(workflow_id, version_id?)`, `transition_run(run_id, status, ...)`, `record_event(run_id, payload)`, FIFO scheduler that promotes the oldest `queued` row when no `running` row exists, abort plumbing (sets cancel flag, drives `queued → aborted` shortcut, drives `running → aborted` through the executor's cleanup hook); persistence-failure isolation (`try/except/log`).
-- [ ] 2.7 Add `app/agents/editor.py` — `EditorAgent` ADK `LlmAgent` with `output_schema=EditorResponse`, system prompt (patches preferred over full replacement, op-set listing, vocabulary rule). Reuses `get_adk_model_cached()`.
-- [ ] 2.8 Add `app/routers/workflows.py` — `GET/POST/PUT/DELETE /api/workflows`, `GET /api/workflows/{id}`, `GET /api/workflows/{id}/versions`.
-- [ ] 2.9 Add `app/routers/chat.py` — `GET /api/chat/{session_id}`, `POST /api/chat/{session_id}/messages` (runs editor turn, applies patch via `services.patch`, writes new `WorkflowVersion`).
-- [ ] 2.10 Add `app/routers/credentials.py` — `GET/POST/PUT/DELETE /api/credentials`, 409 on delete if referenced by any workflow's current version.
-- [ ] 2.11 Add `app/routers/runs.py` — `GET /api/runs`, `POST /api/runs` (always enqueues; returns `{run_id, status:"queued"}`), `GET /api/runs/{id}`, `POST /api/runs/{id}/abort` (mirrors the `{type:"abort"}` WS frame; works for both queued and running rows).
-- [ ] 2.12 Add `app/routers/llm_config.py` — full CRUD + `/activate` + `/effective`, calls `invalidate_model_cache()` on activate / update-of-active / delete-of-active.
-- [ ] 2.13 Extend `app/main.py` — include the five new routers and extend the `/ws/run` handler to (a) accept `{type:"start", run_id}` (wait for scheduler pickup, load workflow version, persist events via `services.runs`), (b) accept `{type:"abort", run_id?}` (set cancel flag, drive run to `aborted`), (c) on socket disconnect mid-run also drive `running → aborted`. The startup hook (table create + Fernet key load) is already wired in §1.8.
-- [ ] 2.14 Modify `app/main.py::generate_workflow` — after the planner returns, create `Workflow` + `WorkflowVersion` + `ChatSession` + seed messages; wrap response `{workflow_id, chat_session_id, workflow}`.
-- [ ] 2.15 Modify `app/executor.py::run_workflow` — accept an optional `record_event` callback that mirrors each emit to the run-events service; default is `None` (ephemeral runs unchanged).
-- [ ] 2.16 Modify `app/tools/actions.py` — call `services.credentials.resolve_params(params, session)` once per action invocation; on `ValueError`, raise so the executor emits `node_failed`.
+- [x] 2.1 Add `sqlmodel` and `cryptography` to `backend/pyproject.toml`. Add `data/` to gitignore.
+- [x] 2.2 Add `app/services/crypto.py` — Fernet key bootstrap (env / file / generate), `encrypt`, `decrypt`, masked helpers (`mask_secret`, `mask_api_key`).
+- [x] 2.3 Add `app/services/llm_settings.py` — `effective_settings()`, `get_adk_model_cached()` (`lru_cache(maxsize=1)` keyed by fingerprint), `invalidate_model_cache()`. Make existing `app/agents/model.py::get_adk_model()` delegate here.
+- [x] 2.4 Add `app/services/patch.py` — `apply_patch(current: Workflow, ops: list[PatchOp]) -> Workflow` with re-validation; raises `PatchValidationError` on any failure.
+- [x] 2.5 Add `app/services/credentials.py` — `resolve_params(params, session)` interpolation pass for `{{cred.name.field}}` tokens; per-field merge for partial updates.
+- [x] 2.6 Add `app/services/runs.py` — `create_queued_run(workflow_id, version_id?)`, `transition_run(run_id, status, ...)`, `record_event(run_id, payload)`, FIFO scheduler that promotes the oldest `queued` row when no `running` row exists, abort plumbing (sets cancel flag, drives `queued → aborted` shortcut, drives `running → aborted` through the executor's cleanup hook); persistence-failure isolation (`try/except/log`).
+- [x] 2.7 Add `app/agents/editor.py` — `EditorAgent` ADK `LlmAgent` with `output_schema=EditorResponse`, system prompt (patches preferred over full replacement, op-set listing, vocabulary rule). Reuses `get_adk_model_cached()`.
+- [x] 2.8 Add `app/routers/workflows.py` — `GET/POST/PUT/DELETE /api/workflows`, `GET /api/workflows/{id}`, `GET /api/workflows/{id}/versions`.
+- [x] 2.9 Add `app/routers/chat.py` — `GET /api/chat/{session_id}`, `POST /api/chat/{session_id}/messages` (runs editor turn, applies patch via `services.patch`, writes new `WorkflowVersion`).
+- [x] 2.10 Add `app/routers/credentials.py` — `GET/POST/PUT/DELETE /api/credentials`, 409 on delete if referenced by any workflow's current version.
+- [x] 2.11 Add `app/routers/runs.py` — `GET /api/runs`, `POST /api/runs` (always enqueues; returns `{run_id, status:"queued"}`), `GET /api/runs/{id}`, `POST /api/runs/{id}/abort` (mirrors the `{type:"abort"}` WS frame; works for both queued and running rows).
+- [x] 2.12 Add `app/routers/llm_config.py` — full CRUD + `/activate` + `/effective`, calls `invalidate_model_cache()` on activate / update-of-active / delete-of-active.
+- [x] 2.13 Extend `app/main.py` — include the five new routers and extend the `/ws/run` handler to (a) accept `{type:"start", run_id}` (wait for scheduler pickup, load workflow version, persist events via `services.runs`), (b) accept `{type:"abort", run_id?}` (set cancel flag, drive run to `aborted`), (c) on socket disconnect mid-run also drive `running → aborted`. The startup hook (table create + Fernet key load) is already wired in §1.8.
+- [x] 2.14 Modify `app/main.py::generate_workflow` — after the planner returns, create `Workflow` + `WorkflowVersion` + `ChatSession` + seed messages; wrap response `{workflow_id, chat_session_id, workflow}`.
+- [x] 2.15 Modify `app/executor.py::run_workflow` — accept an optional `record_event` callback that mirrors each emit to the run-events service; default is `None` (ephemeral runs unchanged).
+- [x] 2.16 Modify `app/tools/actions.py` — call `services.credentials.resolve_params(params, session)` once per action invocation; on `ValueError`, raise so the executor emits `node_failed`.
 - [ ] 2.17 Add unit tests for `services/patch.py`: each op happy path + each failure mode (unknown id, type-changes-after-merge, orphaned `start_id`).
 - [ ] 2.18 Add unit tests for `services/credentials.py::resolve_params`: known token, unknown name, unknown field, recursive interpolation refusal.
 - [ ] 2.19 Add unit tests for `services/crypto.py`: round-trip encrypt / decrypt, env-var override of file, mode 0600 on POSIX (skip on Windows).
@@ -44,33 +44,33 @@ Owned by Sibling A. All under `backend/app/` except where noted.
 
 Owned by Sibling B. All under `frontend/src/` except where noted.
 
-- [ ] 3.1 Add `react-router-dom` to `frontend/package.json`. Add `data/` etc. to gitignore. (`pnpm install` step deferred to verification.)
-- [ ] 3.2 Author `frontend/src/main.tsx` — `RouterProvider` wrapping `Shell`.
-- [ ] 3.3 Author `frontend/src/shell/Shell.tsx` and `Shell.css` — sidebar + `<Outlet/>` layout, brand title link to `/workflows`.
-- [ ] 3.4 Author `frontend/src/shell/Sidebar.tsx` — four nav entries with `NavLink` highlighting.
-- [ ] 3.5 Author `frontend/src/pages/WorkflowsListPage.tsx` — calls `apiClient.listWorkflows`, renders table, "New workflow" modal (reuses existing `NLInput` for the generate path; calls `POST /api/workflow/generate` then navigates to `/workflows/:id`).
-- [ ] 3.6 Author `frontend/src/pages/WorkflowDetailPage.tsx` — three-pane skeleton with placeholder slots. Mounts existing `<WorkflowCanvas/>`. Slots for chat panel (filled by Sibling C) and run log (existing `<RunLog/>`).
-- [ ] 3.7 Add "Run Now" button + WS lifecycle in `WorkflowDetailPage`: `POST /api/runs` → `startRun(workflow, run_id)` (reuses `ws.ts` after a tiny modification to send `run_id` when present — see shared contract change in 1.5 if needed).
-- [ ] 3.8 Author `frontend/src/pages/CredentialsPage.tsx` — list + create/edit/delete modals; never pre-fills plaintext on edit.
-- [ ] 3.9 Author `frontend/src/pages/RunsListPage.tsx` — list runs (filter by `?workflow_id=` query param), each row links to `/runs/:id`.
-- [ ] 3.10 Author `frontend/src/pages/RunReplayPage.tsx` — fetches `/api/runs/{id}`, renders the existing `WorkflowCanvas`, drives `store.applyEvent(payload_json)` in order. Speed controls: instant / 1× / 2× (1× caps inter-event wait at 2 s, never replays `wait` node delays).
-- [ ] 3.11 Author `frontend/src/pages/SettingsPage.tsx` — LLM config CRUD UI, "Currently in use" banner from `/api/llm-config/effective`.
-- [ ] 3.12 Author `frontend/src/pages/NotFoundPage.tsx`.
-- [ ] 3.13 Author `frontend/src/platformStore.ts` — zustand: sidebar collapsed, last opened workflow id; small.
-- [ ] 3.14 Add `frontend/src/App.tsx` redirect → routes file; remove top-bar globals it used to own (moved into `WorkflowDetailPage`).
-- [ ] 3.15 Style work — keep MVP dark theme, BUT do not edit any file under `frontend/src/components/`. New CSS lives under `shell/` and `pages/`.
+- [x] 3.1 Add `react-router-dom` to `frontend/package.json`. Add `data/` etc. to gitignore. (`pnpm install` step deferred to verification.)
+- [x] 3.2 Author `frontend/src/main.tsx` — `RouterProvider` wrapping `Shell`.
+- [x] 3.3 Author `frontend/src/shell/Shell.tsx` and `Shell.css` — sidebar + `<Outlet/>` layout, brand title link to `/workflows`.
+- [x] 3.4 Author `frontend/src/shell/Sidebar.tsx` — four nav entries with `NavLink` highlighting.
+- [x] 3.5 Author `frontend/src/pages/WorkflowsListPage.tsx` — calls `apiClient.listWorkflows`, renders table, "New workflow" modal (reuses existing `NLInput` for the generate path; calls `POST /api/workflow/generate` then navigates to `/workflows/:id`).
+- [x] 3.6 Author `frontend/src/pages/WorkflowDetailPage.tsx` — three-pane skeleton with placeholder slots. Mounts existing `<WorkflowCanvas/>`. Slots for chat panel (filled by Sibling C) and run log (existing `<RunLog/>`).
+- [x] 3.7 Add "Run Now" button + WS lifecycle in `WorkflowDetailPage`: `POST /api/runs` → `startRun(workflow, run_id)` (reuses `ws.ts` after a tiny modification to send `run_id` when present — see shared contract change in 1.5 if needed).
+- [x] 3.8 Author `frontend/src/pages/CredentialsPage.tsx` — list + create/edit/delete modals; never pre-fills plaintext on edit.
+- [x] 3.9 Author `frontend/src/pages/RunsListPage.tsx` — list runs (filter by `?workflow_id=` query param), each row links to `/runs/:id`.
+- [x] 3.10 Author `frontend/src/pages/RunReplayPage.tsx` — fetches `/api/runs/{id}`, renders the existing `WorkflowCanvas`, drives `store.applyEvent(payload_json)` in order. Speed controls: instant / 1× / 2× (1× caps inter-event wait at 2 s, never replays `wait` node delays).
+- [x] 3.11 Author `frontend/src/pages/SettingsPage.tsx` — LLM config CRUD UI, "Currently in use" banner from `/api/llm-config/effective`.
+- [x] 3.12 Author `frontend/src/pages/NotFoundPage.tsx`.
+- [x] 3.13 Author `frontend/src/platformStore.ts` — zustand: sidebar collapsed, last opened workflow id; small.
+- [x] 3.14 Add `frontend/src/App.tsx` redirect → routes file; remove top-bar globals it used to own (moved into `WorkflowDetailPage`).
+- [x] 3.15 Style work — keep MVP dark theme, BUT do not edit any file under `frontend/src/components/`. New CSS lives under `shell/` and `pages/`.
 - [ ] 3.16 Smoke-check: `pnpm install && pnpm build` (or `tsc --noEmit` + `vite build`) succeeds.
 
 ## 4. Frontend chat authoring (Sibling C — `[frontend-chat]`)
 
 Owned by Sibling C. Touches only the chat panel and the slot it mounts into.
 
-- [ ] 4.1 Author `frontend/src/chat/ChatPanel.tsx` and `ChatPanel.css` — message list + composer (textarea + send button). Renders user / assistant bubbles with markdown.
-- [ ] 4.2 Author `frontend/src/chat/useChatReducer.ts` — local state machine: idle, sending, error. Optimistically appends user message; on success, appends assistant message and dispatches `setWorkflow(workflow)` if the response includes a new version.
-- [ ] 4.3 Author `frontend/src/chat/api.ts` — thin wrappers over `apiClient.getChat` and `apiClient.postChatMessage` (defined in the shared contract).
-- [ ] 4.4 Author `frontend/src/chat/PatchPreview.tsx` — given an assistant message that carries `patch_json`, renders a one-line summary per op (e.g. `+ node n7 (click "购物车")`, `~ node n3.params.value`). On hover, shows the corresponding node id highlighted on the canvas (via `useStore.getState().selectNode(id)`).
-- [ ] 4.5 Mount `<ChatPanel session_id={chat_session_id}/>` inside `WorkflowDetailPage`'s top-right slot. The only edit to a Sibling-B file is this single mount line.
-- [ ] 4.6 Handle the error case where the editor returned no version (validation failure): show the error block inline in the assistant bubble with a "Retry" button that re-sends the user's last message.
+- [x] 4.1 Author `frontend/src/chat/ChatPanel.tsx` and `ChatPanel.css` — message list + composer (textarea + send button). Renders user / assistant bubbles with markdown.
+- [x] 4.2 Author `frontend/src/chat/useChatReducer.ts` — local state machine: idle, sending, error. Optimistically appends user message; on success, appends assistant message and dispatches `setWorkflow(workflow)` if the response includes a new version.
+- [x] 4.3 Author `frontend/src/chat/api.ts` — thin wrappers over `apiClient.getChat` and `apiClient.postChatMessage` (defined in the shared contract).
+- [x] 4.4 Author `frontend/src/chat/PatchPreview.tsx` — given an assistant message that carries `patch_json`, renders a one-line summary per op (e.g. `+ node n7 (click "购物车")`, `~ node n3.params.value`). On hover, shows the corresponding node id highlighted on the canvas (via `useStore.getState().selectNode(id)`).
+- [x] 4.5 Mount `<ChatPanel session_id={chat_session_id}/>` inside `WorkflowDetailPage`'s top-right slot. The only edit to a Sibling-B file is this single mount line.
+- [x] 4.6 Handle the error case where the editor returned no version (validation failure): show the error block inline in the assistant bubble with a "Retry" button that re-sends the user's last message.
 - [ ] 4.7 Smoke-check: `tsc --noEmit` clean, and a manual end-to-end: open a workflow, send "add a node to click the cart", confirm a new node appears on the canvas and the chat shows the patch summary.
 
 ## 5. Verification (parent worker — after siblings merge)

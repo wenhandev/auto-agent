@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acme Supply Hub — 供应商门户</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ═══ LOGIN ═══ -->
+  <div id="login-view" class="login-shell" data-testid="login-view">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="logo" aria-hidden="true">AS</div>
+        <h1 data-i18n="brand">Acme Supply Hub</h1>
+        <p data-i18n="brand_sub">B2B 供应商协作门户 · Supplier Portal</p>
+      </div>
+
+      <div class="step-indicator" data-testid="login-step-indicator">
+        <div class="step-dot active" id="step-dot-1"></div>
+        <div class="step-dot" id="step-dot-2"></div>
+      </div>
+
+      <!-- Step 1: credentials -->
+      <form id="login-form" data-testid="login-form" autocomplete="off">
+        <div class="field">
+          <label for="login-email" data-i18n="email">邮箱 Email</label>
+          <input type="email" id="login-email" data-testid="login-email" placeholder="demo@acme.com" required />
+        </div>
+        <div class="field">
+          <label for="login-password" data-i18n="password">密码 Password</label>
+          <input type="password" id="login-password" data-testid="login-password" placeholder="••••••••" required />
+        </div>
+        <p id="login-error" class="error-msg hidden" data-testid="login-error"></p>
+        <button type="submit" class="btn btn-primary" id="login-submit-btn" data-testid="login-submit" data-i18n="continue">继续 Continue</button>
+      </form>
+
+      <!-- Step 2: reCAPTCHA -->
+      <form id="recaptcha-form" class="hidden" data-testid="recaptcha-form" autocomplete="off">
+        <div class="recaptcha-hint" data-i18n="recaptcha_hint">请完成 reCAPTCHA 验证 · Complete reCAPTCHA</div>
+        <div id="recaptcha-widget" class="recaptcha-widget" data-testid="recaptcha-widget"></div>
+        <p id="recaptcha-error" class="error-msg hidden" data-testid="recaptcha-error"></p>
+        <button type="submit" class="btn btn-primary" data-testid="recaptcha-verify" data-i18n="verify">验证 Verify</button>
+        <button type="button" class="btn btn-outline" style="width:100%;margin-top:10px" id="recaptcha-back" data-testid="recaptcha-back" data-i18n="back">返回 Back</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ APP SHELL ═══ -->
+  <div id="app-view" class="app-shell hidden" data-testid="app-view">
+    <aside class="sidebar" data-testid="sidebar">
+      <div class="sidebar-brand">
+        <h2>Acme Supply</h2>
+        <span data-i18n="portal">供应商门户</span>
+      </div>
+      <ul class="nav-list">
+        <li class="nav-item">
+          <button class="nav-link active" data-page="dashboard" data-testid="nav-dashboard">
+            <span class="nav-icon">📊</span><span class="label" data-i18n="nav_dashboard">仪表盘</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-page="orders" data-testid="nav-orders">
+            <span class="nav-icon">📦</span><span class="label" data-i18n="nav_orders">采购订单</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-page="shipments" data-testid="nav-shipments">
+            <span class="nav-icon">🚚</span><span class="label" data-i18n="nav_shipments">物流追踪</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-page="invoices" data-testid="nav-invoices">
+            <span class="nav-icon">🧾</span><span class="label" data-i18n="nav_invoices">发票对账</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-page="support" data-testid="nav-support">
+            <span class="nav-icon">💬</span><span class="label" data-i18n="nav_support">技术支持</span>
+          </button>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline btn-sm" id="logout-btn" data-testid="logout-btn" data-i18n="logout" aria-hidden="true" tabindex="-1" style="width:100%;color:#94a3b8;border-color:#334155">退出 Logout</button>
+      </div>
+    </aside>
+
+    <div class="main-area">
+      <header class="topbar">
+        <h1 id="page-title" data-i18n="nav_dashboard">仪表盘</h1>
+        <div class="topbar-actions">
+          <div class="lang-toggle" data-testid="lang-toggle">
+            <button class="lang-btn active" data-lang="zh" data-testid="lang-zh" aria-hidden="true" tabindex="-1">中文</button>
+            <button class="lang-btn" data-lang="en" data-testid="lang-en" aria-hidden="true" tabindex="-1">EN</button>
+          </div>
+          <div class="user-chip" data-testid="user-chip">
+            <div class="user-avatar" id="user-avatar">D</div>
+            <span id="user-email">demo@acme.com</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="content" id="main-content">
+        <!-- Dashboard -->
+        <section id="page-dashboard" class="page" data-testid="page-dashboard">
+          <div class="kpi-grid">
+            <div class="kpi-card" data-testid="kpi-open-orders">
+              <div class="label" data-i18n="kpi_open">待处理订单</div>
+              <div class="value" id="kpi-open">12</div>
+            </div>
+            <div class="kpi-card" data-testid="kpi-in-transit">
+              <div class="label" data-i18n="kpi_transit">在途发货</div>
+              <div class="value" id="kpi-transit">5</div>
+            </div>
+            <div class="kpi-card" data-testid="kpi-pending-invoices">
+              <div class="label" data-i18n="kpi_invoices">待对账发票</div>
+              <div class="value" id="kpi-invoices">3</div>
+            </div>
+            <div class="kpi-card" data-testid="kpi-fulfillment">
+              <div class="label" data-i18n="kpi_fulfillment">准时交付率</div>
+              <div class="value">96.2%</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <h3 data-i18n="recent_orders">最近订单</h3>
+              <button class="btn btn-outline btn-sm" id="dash-goto-orders" data-testid="dash-goto-orders" data-i18n="view_all">查看全部</button>
+            </div>
+            <div class="panel-body" style="padding:0">
+              <table class="data-table" data-testid="dashboard-orders-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="col_order_id">订单号</th>
+                    <th data-i18n="col_buyer">采购方</th>
+                    <th data-i18n="col_amount">金额</th>
+                    <th data-i18n="col_status">状态</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-orders-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Orders -->
+        <section id="page-orders" class="page hidden" data-testid="page-orders">
+          <div class="role-banner" data-testid="role-banner">
+            <span data-i18n="role_info">当前角色: 供应商管理员 — 可审批加急订单</span>
+            <button class="btn btn-accent btn-sm hidden" id="approve-rush-btn" data-testid="approve-rush-btn" data-i18n="approve_rush">批准加急</button>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3 data-i18n="filter_orders">筛选订单</h3></div>
+            <div class="panel-body">
+              <form id="orders-filter-form" data-testid="orders-filter-form">
+                <div class="filter-row">
+                  <div class="field">
+                    <label for="filter-order-id" data-i18n="col_order_id">订单号</label>
+                    <input type="text" id="filter-order-id" data-testid="filter-order-id" placeholder="PO-2024-" />
+                  </div>
+                  <div class="field">
+                    <label for="filter-status" data-i18n="col_status">状态</label>
+                    <select id="filter-status" data-testid="filter-status">
+                      <option value="" data-i18n="all_status">全部</option>
+                      <option value="confirmed" data-i18n="status_confirmed">已确认</option>
+                      <option value="processing" data-i18n="status_processing">处理中</option>
+                      <option value="shipped" data-i18n="status_shipped">已发货</option>
+                      <option value="delivered" data-i18n="status_delivered">已交付</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="filter-date-from" data-i18n="date_from">起始日期</label>
+                    <input type="date" id="filter-date-from" data-testid="filter-date-from" value="2024-01-01" aria-hidden="true" tabindex="-1" />
+                  </div>
+                  <div class="field" style="display:flex;align-items:flex-end">
+                    <button type="submit" class="btn btn-primary" data-testid="filter-submit" data-i18n="search" aria-hidden="true" tabindex="-1">搜索 Search</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div class="split-layout">
+            <div class="panel" style="margin:0">
+              <div class="panel-header">
+                <h3 data-i18n="order_list">订单列表</h3>
+                <span id="orders-count" data-testid="orders-count"></span>
+              </div>
+              <div class="panel-body" style="padding:0">
+                <table class="data-table" data-testid="orders-table">
+                  <thead>
+                    <tr>
+                      <th data-i18n="col_order_id">订单号</th>
+                      <th data-i18n="col_buyer">采购方</th>
+                      <th data-i18n="col_items">行项</th>
+                      <th data-i18n="col_amount">金额 (CNY)</th>
+                      <th data-i18n="col_status">状态</th>
+                      <th data-i18n="col_date">下单日期</th>
+                    </tr>
+                  </thead>
+                  <tbody id="orders-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="detail-panel" id="order-detail-panel" data-testid="order-detail-panel">
+              <h4 data-i18n="order_detail">订单详情</h4>
+              <p style="color:var(--muted);font-size:0.85rem" data-i18n="select_order">点击左侧订单行查看详情</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Shipments -->
+        <section id="page-shipments" class="page hidden" data-testid="page-shipments">
+          <div class="panel">
+            <div class="panel-header"><h3 data-i18n="shipment_tracking">物流追踪</h3></div>
+            <div class="panel-body" id="shipments-list" data-testid="shipments-list"></div>
+          </div>
+        </section>
+
+        <!-- Invoices -->
+        <section id="page-invoices" class="page hidden" data-testid="page-invoices">
+          <div class="panel">
+            <div class="panel-header"><h3 data-i18n="invoice_list">发票列表</h3></div>
+            <div class="panel-body" style="padding:0">
+              <table class="data-table" data-testid="invoices-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="col_invoice_id">发票号</th>
+                    <th data-i18n="col_order_id">关联订单</th>
+                    <th data-i18n="col_period">账期</th>
+                    <th data-i18n="col_amount">金额 (CNY)</th>
+                    <th data-i18n="col_status">状态</th>
+                    <th data-i18n="col_action">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="invoices-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="invoice-summary-panel" class="invoice-summary-panel hidden-panel" data-testid="invoice-summary-panel">
+            <h4 data-i18n="invoice_summary">Invoice Summary</h4>
+            <div id="invoice-summary-content"></div>
+            <pre class="extract-json" id="invoice-json" data-testid="invoice-json"></pre>
+            <button id="invoice-data-ready-btn" class="btn btn-success btn-sm" aria-label="CALL EXTRACT NOW invoice data loaded" data-testid="invoice-data-ready" style="margin-top:8px">⚡ CALL extract() NOW — Invoice JSON ready</button>
+          </div>
+        </section>
+
+        <!-- Support -->
+        <section id="page-support" class="page hidden" data-testid="page-support">
+          <div class="panel">
+            <div class="panel-header"><h3 data-i18n="support_ticket">提交工单</h3></div>
+            <div class="panel-body">
+              <div class="wizard-steps" data-testid="support-wizard">
+                <div class="wizard-step active" id="wiz-step-1" data-i18n="wiz_category">1. 选择类别</div>
+                <div class="wizard-step" id="wiz-step-2" data-i18n="wiz_details">2. 填写详情</div>
+                <div class="wizard-step" id="wiz-step-3" data-i18n="wiz_confirm">3. 确认提交</div>
+              </div>
+
+              <div id="support-step-1" data-testid="support-step-1">
+                <div class="field">
+                  <label for="ticket-category" data-i18n="ticket_category">问题类别</label>
+                  <select id="ticket-category" data-testid="ticket-category">
+                    <option value="" data-i18n="select_category">请选择...</option>
+                    <option value="delivery" data-i18n="cat_delivery">物流配送</option>
+                    <option value="quality" data-i18n="cat_quality">产品质量</option>
+                    <option value="billing" data-i18n="cat_billing">账单对账</option>
+                    <option value="integration" data-i18n="cat_integration">系统对接</option>
+                  </select>
+                </div>
+                <button class="btn btn-primary" id="support-next-1" data-testid="support-next-1" data-i18n="next">下一步 Next</button>
+              </div>
+
+              <div id="support-step-2" class="hidden" data-testid="support-step-2">
+                <div class="field">
+                  <label for="ticket-subject" data-i18n="ticket_subject">主题</label>
+                  <input type="text" id="ticket-subject" data-testid="ticket-subject" placeholder="Brief description" />
+                </div>
+                <div class="field">
+                  <label for="ticket-description" data-i18n="ticket_description">详细描述</label>
+                  <textarea id="ticket-description" data-testid="ticket-description" rows="5" placeholder="Describe the issue..."></textarea>
+                </div>
+                <div style="display:flex;gap:10px">
+                  <button class="btn btn-outline" id="support-back-2" data-testid="support-back-2" data-i18n="back">返回</button>
+                  <button class="btn btn-primary" id="support-next-2" data-testid="support-next-2" data-i18n="next">下一步</button>
+                </div>
+              </div>
+
+              <div id="support-step-3" class="hidden" data-testid="support-step-3">
+                <div id="support-review" data-testid="support-review"></div>
+                <div style="display:flex;gap:10px;margin-top:16px">
+                  <button class="btn btn-outline" id="support-back-3" data-testid="support-back-3" data-i18n="back">返回</button>
+                  <button class="btn btn-accent" id="support-submit" data-testid="support-submit" data-i18n="submit_ticket">提交工单</button>
+                </div>
+              </div>
+
+              <div id="support-success" class="support-success hidden" data-testid="support-success">
+                <div class="check">✓</div>
+                <h3 data-i18n="ticket_created">工单已创建</h3>
+                <p id="ticket-id-display" data-testid="ticket-id-display"></p>
+                <pre class="extract-json" id="ticket-json" data-testid="ticket-json"></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&amp;render=explicit" async defer></script>
+</body>
+</html>

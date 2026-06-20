@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Play, Square } from "lucide-react";
+import { Play, Save, Square } from "lucide-react";
 import { routePath } from "@/routes";
 import type { PlatformRunStatus } from "@/platformStore";
 import type { WorkflowVersionOut } from "@/types-platform";
@@ -29,6 +29,10 @@ interface Props {
   onAbort(): void;
   runDisabled: boolean;
   abortDisabled: boolean;
+  isDirty?: boolean;
+  onSave?(): void;
+  saveDisabled?: boolean;
+  isSaving?: boolean;
 }
 
 export function WorkflowDetailHeader({
@@ -43,6 +47,10 @@ export function WorkflowDetailHeader({
   onAbort,
   runDisabled,
   abortDisabled,
+  isDirty = false,
+  onSave,
+  saveDisabled = false,
+  isSaving = false,
 }: Props) {
   const { t } = useTranslation();
   const [draftName, setDraftName] = useState(name);
@@ -86,6 +94,11 @@ export function WorkflowDetailHeader({
       <Badge variant={statusBadgeVariant(runStatus)}>
         {t(`status.${runStatus}`, runStatus)}
       </Badge>
+      {isDirty && (
+        <Badge variant="outline" className="border-amber-500/50 text-amber-600">
+          {t("pages.workflowDetail.unsaved")}
+        </Badge>
+      )}
       <div className="flex-1" />
       {versions.length > 0 && (
         <Select
@@ -115,6 +128,19 @@ export function WorkflowDetailHeader({
           {t("pages.workflowDetail.credentialsLink")}
         </Link>
       </Button>
+      {onSave && (
+        <Button
+          onClick={onSave}
+          disabled={saveDisabled}
+          size="sm"
+          variant="secondary"
+        >
+          <Save className="mr-1.5 h-3.5 w-3.5" />
+          {isSaving
+            ? t("pages.workflowDetail.saving")
+            : t("pages.workflowDetail.save")}
+        </Button>
+      )}
       <Button onClick={onRun} disabled={runDisabled} size="sm">
         <Play className="mr-1.5 h-3.5 w-3.5" />
         {t("pages.workflowDetail.run")}

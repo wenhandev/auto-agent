@@ -1,0 +1,125 @@
+{
+  "app": "gmail",
+  "version": "1.0.0",
+  "credentials": ["gmail_oauth2"],
+  "resources": [
+    {
+      "name": "messages",
+      "label": "Messages",
+      "operations": [
+        {
+          "name": "send",
+          "label": "Send Message",
+          "fields": [
+            {"name": "to", "label": "To", "kind": "string", "required": true},
+            {"name": "subject", "label": "Subject", "kind": "string", "required": true},
+            {"name": "body", "label": "Body", "kind": "string", "required": true}
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            "headers": {"Content-Type": "application/json"},
+            "body": {}
+          },
+          "response": {"root_path": ""}
+        },
+        {
+          "name": "list",
+          "label": "List Messages",
+          "fields": [
+            {
+              "name": "maxResults",
+              "label": "Max Results",
+              "kind": "number",
+              "required": false,
+              "default": 100
+            },
+            {
+              "name": "q",
+              "label": "Query",
+              "kind": "string",
+              "required": false,
+              "default": ""
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+            "query": {
+              "maxResults": "{{$fields.maxResults}}",
+              "q": "{{$fields.q}}"
+            }
+          },
+          "response": {
+            "item_path": "messages",
+            "pagination": {
+              "type": "cursor",
+              "cursor_path": "nextPageToken",
+              "cursor_param": "pageToken",
+              "page_size": 100,
+              "max_pages": 10
+            }
+          }
+        },
+        {
+          "name": "get",
+          "label": "Get Message",
+          "fields": [
+            {"name": "id", "label": "Message ID", "kind": "string", "required": true},
+            {
+              "name": "format",
+              "label": "Format",
+              "kind": "string",
+              "required": false,
+              "default": "full"
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/{{$fields.id}}",
+            "query": {"format": "{{$fields.format}}"}
+          },
+          "response": {"root_path": ""}
+        }
+      ]
+    },
+    {
+      "name": "drafts",
+      "label": "Drafts",
+      "operations": [
+        {
+          "name": "create",
+          "label": "Create Draft",
+          "fields": [
+            {"name": "to", "label": "To", "kind": "string", "required": true},
+            {"name": "subject", "label": "Subject", "kind": "string", "required": true},
+            {"name": "body", "label": "Body", "kind": "string", "required": true}
+          ],
+            "request": {
+            "method": "POST",
+            "url": "https://gmail.googleapis.com/gmail/v1/users/me/drafts",
+            "headers": {"Content-Type": "application/json"},
+            "body": {}
+          },
+          "response": {"root_path": ""}
+        }
+      ]
+    },
+    {
+      "name": "labels",
+      "label": "Labels",
+      "operations": [
+        {
+          "name": "list",
+          "label": "List Labels",
+          "fields": [],
+          "request": {
+            "method": "GET",
+            "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels"
+          },
+          "response": {"item_path": "labels"}
+        }
+      ]
+    }
+  ]
+}

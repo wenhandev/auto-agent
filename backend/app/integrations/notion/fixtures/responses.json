@@ -1,0 +1,32 @@
+{
+  "create_page_success": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "object": "page",
+      "id": "page-abc",
+      "created_time": "2024-01-01T00:00:00.000Z",
+      "properties": {"title": {"title": [{"text": {"content": "New page"}}]}}
+    }
+  },
+  "database_query_page1": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "object": "list",
+      "results": [{"id": "row-1", "object": "page"}, {"id": "row-2", "object": "page"}],
+      "has_more": true,
+      "next_cursor": "cursor-2"
+    }
+  },
+  "database_query_page2": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "object": "list",
+      "results": [{"id": "row-3", "object": "page"}],
+      "has_more": false,
+      "next_cursor": null
+    }
+  }
+}

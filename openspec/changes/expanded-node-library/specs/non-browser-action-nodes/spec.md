@@ -12,7 +12,7 @@ Filesystem access is sandboxed **per-workflow** to `backend/data/workflow_files/
 - **As a workflow author**, I want a `4xx` HTTP response to be observable (so my next node can branch on it) instead of silently failing the run.
 - **As an operator**, I want file access confined to a single workspace dir so a buggy workflow cannot read my SSH keys.
 
-## Functional requirements
+## ADDED Requirements
 
 ### Requirement: `http_request` Node
 

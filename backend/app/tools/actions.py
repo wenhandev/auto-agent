@@ -20,7 +20,12 @@ async def click(selector: str) -> dict:
 
 async def fill(selector: str, value: str) -> dict:
     page = await get_page()
-    await page.fill(selector, value)
+    locator = page.locator(selector)
+    tag = await locator.evaluate("el => el.tagName.toLowerCase()")
+    if tag == "select":
+        await locator.select_option(value)
+    else:
+        await locator.fill(value)
     return {"selector": selector, "value": value}
 
 

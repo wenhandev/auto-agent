@@ -1,0 +1,63 @@
+name: Build sidecar runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "backend/app/worker/**"
+      - "backend/app/runtime_engine/**"
+      - "worker/**"
+      - "backend/pyproject.toml"
+      - ".github/workflows/build-sidecar.yml"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: auto-agent-sidecar-windows
+          - os: macos-latest
+            artifact: auto-agent-sidecar-macos
+          - os: ubuntu-latest
+            artifact: auto-agent-sidecar-linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install and build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\worker\build-exe.ps1
+
+      - name: Install and build (macOS)
+        if: runner.os == 'macOS'
+        run: ./worker/build-macos.sh
+
+      - name: Install and build (Linux)
+        if: runner.os == 'Linux'
+        run: ./worker/build-linux.sh
+
+      - name: Smoke test binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & backend\dist\auto-agent-worker\auto-agent-worker.exe --help
+
+      - name: Smoke test binary (macOS/Linux)
+        if: runner.os != 'Windows'
+        run: |
+          ./backend/dist/auto-agent-worker/auto-agent-worker --help
+
+      - name: Upload sidecar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: backend/dist/auto-agent-worker/
+          retention-days: 30

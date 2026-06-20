@@ -40,9 +40,27 @@ class SelfHealSettings:
     threshold: float
 
 
+@dataclass(frozen=True)
+class SelectorCacheSettings:
+    enabled: bool
+
+
+_cached_selector_cache_fp: Optional[tuple] = None
+_cached_selector_cache: Optional[dict] = None
+
+
 def _env_settings() -> Optional[EffectiveLlmSettings]:
     provider = (settings.llm_provider or "").lower() or None
     if provider in ("google", "gemini"):
+        if settings.gemini_provider.lower() == "vertex" and settings.gcp_project:
+            return EffectiveLlmSettings(
+                source="env",
+                id=None,
+                provider="google",
+                model=settings.google_model,
+                api_key="",
+                base_url=settings.google_base_url,
+            )
         if not settings.google_api_key:
             return None
         return EffectiveLlmSettings(
@@ -126,6 +144,14 @@ def _build_model(eff: EffectiveLlmSettings):
     from google.adk.models.lite_llm import LiteLlm
 
     if eff.provider in ("google", "gemini"):
+        if (
+            settings.gemini_provider.lower() == "vertex"
+            and settings.gcp_project
+            and not eff.base_url
+        ):
+            from app.agents.model import _VertexGemini
+
+            return _VertexGemini(model=eff.model)
         if eff.base_url:
             from app.agents.model import _RelayGemini
 
@@ -159,11 +185,14 @@ def get_active_model() -> Union[str, Any]:
 
 def invalidate_cache() -> None:
     global _cached_fingerprint, _cached_model, _cached_self_heal_fp, _cached_self_heal
+    global _cached_selector_cache_fp, _cached_selector_cache
     _cached_fingerprint = None
     _cached_model = None
     with _self_heal_lock:
         _cached_self_heal_fp = None
         _cached_self_heal = None
+        _cached_selector_cache_fp = None
+        _cached_selector_cache = None
 
 
 def get_self_heal_settings(
@@ -213,12 +242,47 @@ def get_self_heal_settings(
     return _read(session)
 
 
+def get_selector_cache_settings(
+    session: Optional[Session] = None,
+) -> SelectorCacheSettings:
+    """Return whether selector/action cache is enabled (default on)."""
+    global _cached_selector_cache_fp, _cached_selector_cache
+
+    def _read(own_session: Session) -> SelectorCacheSettings:
+        row = own_session.exec(
+            select(LlmConfig).where(LlmConfig.is_active == True)  # noqa: E712
+        ).first()
+        if row is None:
+            return SelectorCacheSettings(enabled=True)
+        return SelectorCacheSettings(
+            enabled=bool(getattr(row, "selector_cache_enabled", True))
+        )
+
+    if session is None:
+        with Session(engine) as own:
+            row = own.exec(
+                select(LlmConfig).where(LlmConfig.is_active == True)  # noqa: E712
+            ).first()
+            fp = (row.id, getattr(row, "selector_cache_enabled", True)) if row else (None, True)
+            with _self_heal_lock:
+                if _cached_selector_cache_fp == fp and _cached_selector_cache is not None:
+                    return SelectorCacheSettings(**_cached_selector_cache)
+                result = _read(own)
+                _cached_selector_cache_fp = fp
+                _cached_selector_cache = {"enabled": result.enabled}
+                return result
+
+    return _read(session)
+
+
 __all__ = [
     "EffectiveLlmSettings",
     "SelfHealSettings",
+    "SelectorCacheSettings",
     "effective_settings",
     "get_active_model",
     "get_self_heal_settings",
+    "get_selector_cache_settings",
     "invalidate_cache",
     "mask_api_key",
 ]

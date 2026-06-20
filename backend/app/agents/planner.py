@@ -25,8 +25,9 @@ from google.genai import types
 from pydantic import ValidationError
 
 from app.agents.model import get_adk_model
+from app.integrations.catalogue_prompt import integration_catalogue_prompt
 from app.schemas import Workflow
-from app.settings import settings
+from app.settings import llm_is_configured, settings
 
 
 PLANNER_INSTRUCTION = """\
@@ -52,18 +53,50 @@ Allowed NodeType values and their params:
   - "fill"         params: { "selector": str, "value": str }
   - "wait"         params: { "ms": int }
   - "extract"      params: { "instruction": str }
-  - "fuzzy_action" params: { "instruction": str }
-  - "condition"    params: { "expr": str }      # outgoing edges set when="true"/"false"
+  - "vision_navigate" params: { "goal": str, "max_steps"?: int, "success_criteria"?: str }
+  - "vision_act"   params: { "instruction": str }
+  - "vision_extract" params: { "instruction": str, "schema"?: object }
+  - "fuzzy_action" params: { "instruction": str }  # alias of vision_navigate
+  - "condition"    params: { "expr": str } OR { "predicate": { "left", "op", "right"? } }
+                   # IF/ELSE flow branch — outgoing edges use when="true"/"false"
+  - "switch"       params: { "expr": str }      # multi-way branch — edges use case="..."
+                   # use switch for 3+ paths; use filter to shrink item lists (not flow skip)
+  - "approval"     params: { "prompt": str, "inputs"?: [{name,type,required?,default?,label?}],
+                               "approve_label"?: str, "reject_label"?: str }
+                   # pauses the run until an operator approves or rejects
+  - "login"        params: { "credential": str, "url"?: str, "success_criteria"?: str,
+                               "totp_identifier"?: str }
+                   # authenticates via vision using a linked credential; prefer over
+                   # hand-rolled fill/click login sequences
+""" + integration_catalogue_prompt() + """
+
+Example approval node before a risky click:
+{"id":"n_confirm","type":"approval","label":"确认继续？","params":{"prompt":"确认继续？","inputs":[{"name":"note","type":"string","required":true}]}}
 
 RULES
 - Use the user's vocabulary verbatim in each `label` (Chinese or English).
 - One user-perceivable step per node. Keep the graph small.
-- Prefer deterministic types ("navigate", "click", "fill", "wait", "extract")
-  when the description is precise.
-- Use "fuzzy_action" only when the step requires perception/judgment ("find the
-  ...", "decide which ...", "analyze the page ...").
+- Prefer vision primitives ("vision_navigate", "vision_act", "vision_extract") when
+  the step needs perception or judgment — selectors in click/fill are optional hints.
+- Use a "login" node (not fill/click chains) when the workflow must authenticate.
+- Use deterministic types ("navigate", "click", "fill", "wait", "extract") when the
+  description is precise and selectors are known.
+- Use "fuzzy_action" only for backward compatibility (same as vision_navigate).
+- Use **condition** (IF) when the workflow must take one of two paths based on data
+  (e.g. HTTP status >= 400 → error path). Connect with when="true" and when="false" edges.
+- Use **switch** when branching into three or more cases (e.g. status paid/pending/failed).
+- Use **filter** to remove items from a list inside a data pipeline — NOT to skip steps.
 - Always set `start_id` and connect every non-end node with an outgoing edge.
 - Node ids must be unique; reuse them in edges. Edge ids must be unique too.
+
+ERROR HANDLING
+Each node may declare a retry policy ({max_attempts, backoff_ms}) and a failure
+policy on_error ∈ {"fail_run", "continue", "branch"}. Edges may carry
+kind="on_error" to be followed when the source node's on_error="branch" and it
+failed. Example: a flaky click node n4 with retry={max_attempts:3, backoff_ms:500}
+and on_error="branch", plus an edge {source:"n4", target:"cleanup_n9",
+kind:"on_error"}, will retry the click up to 3 times, then route to cleanup_n9
+if all attempts fail.
 
 EXAMPLES
 
@@ -80,11 +113,24 @@ Output:
  ],
  "start_id":"n1"}
 
+Description: 打开示例页面,找到主标题并提取为 JSON
+Output:
+{"nodes":[
+  {"id":"n1","type":"navigate","label":"打开示例页面","params":{"url":"https://example.com"}},
+  {"id":"n2","type":"vision_extract","label":"提取主标题","params":{"instruction":"页面 h1 主标题","schema":{"type":"object","properties":{"title":{"type":"string"}},"required":["title"]}}},
+  {"id":"n3","type":"vision_act","label":"点击更多","params":{"instruction":"点击 More 链接"}}
+ ],
+ "edges":[
+  {"id":"e1","source":"n1","target":"n2"},
+  {"id":"e2","source":"n2","target":"n3"}
+ ],
+ "start_id":"n1"}
+
 Description: 打开示例页面,分析页面找到主标题,然后跳转到 example.org
 Output:
 {"nodes":[
   {"id":"n1","type":"navigate","label":"打开示例页面","params":{"url":"https://example.com"}},
-  {"id":"n2","type":"fuzzy_action","label":"分析页面找到主标题","params":{"instruction":"找到 h1 主标题文字"}},
+  {"id":"n2","type":"vision_navigate","label":"分析页面找到主标题","params":{"goal":"找到 h1 主标题文字"}},
   {"id":"n3","type":"navigate","label":"跳转到 example.org","params":{"url":"https://example.org"}}
  ],
  "edges":[
@@ -138,10 +184,10 @@ class PlannerAgent:
                 "LLM API key not configured for provider 'openai' "
                 "(set OPENAI_API_KEY in .env)"
             )
-        if provider in ("google", "gemini") and not settings.google_api_key:
+        if provider in ("google", "gemini") and not llm_is_configured():
             raise RuntimeError(
                 "LLM API key not configured for provider 'google' "
-                "(set GOOGLE_API_KEY in .env)"
+                "(set GOOGLE_API_KEY in .env, or GEMINI_PROVIDER=vertex + GCP_PROJECT)"
             )
 
     async def _run_once(self, description: str) -> str:

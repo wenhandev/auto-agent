@@ -1,0 +1,37 @@
+{
+  "send_success": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "id": "msg-abc123",
+      "threadId": "thread-xyz",
+      "labelIds": ["SENT"]
+    }
+  },
+  "list_page1": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "messages": [{"id": "m1", "threadId": "t1"}, {"id": "m2", "threadId": "t2"}],
+      "nextPageToken": "page-2"
+    }
+  },
+  "list_page2": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "messages": [{"id": "m3", "threadId": "t3"}],
+      "nextPageToken": null
+    }
+  },
+  "get_message": {
+    "status": 200,
+    "headers": {"content-type": "application/json"},
+    "json": {
+      "id": "m1",
+      "threadId": "t1",
+      "snippet": "Hello world",
+      "payload": {"headers": []}
+    }
+  }
+}

@@ -5,19 +5,26 @@ import type {
   Workflow,
 } from "./types";
 
-export type RunStatus = "idle" | "running" | "completed" | "failed";
+export type RunStatus = "idle" | "running" | "completed" | "failed" | "aborted";
 
 interface State {
   workflow: Workflow | null;
   runStatus: RunStatus;
   nodeStates: Record<string, NodeRuntimeState>;
+  prunedEdgeIds: Set<string>;
   logs: RunEvent[];
   selectedNodeId: string | null;
+  selectedEdgeId: string | null;
   setWorkflow(wf: Workflow): void;
+  /** Update graph structure without clearing run logs, node states, or selection. */
+  syncWorkflowGraph(wf: Workflow): void;
+  /** Full reset for replay initial load. */
+  resetWorkflowForReplay(wf: Workflow): void;
   applyEvent(ev: RunEvent): void;
   resetRun(): void;
   setRunStatus(status: RunStatus): void;
   selectNode(id: string | null): void;
+  selectEdge(id: string | null): void;
 }
 
 function freshNodeStates(wf: Workflow): Record<string, NodeRuntimeState> {
@@ -32,16 +39,36 @@ export const useStore = create<State>((set, get) => ({
   workflow: null,
   runStatus: "idle",
   nodeStates: {},
+  prunedEdgeIds: new Set(),
   logs: [],
   selectedNodeId: null,
+  selectedEdgeId: null,
 
   setWorkflow(wf) {
     set({
       workflow: wf,
       nodeStates: freshNodeStates(wf),
+      prunedEdgeIds: new Set(),
       logs: [],
       runStatus: "idle",
       selectedNodeId: null,
+      selectedEdgeId: null,
+    });
+  },
+
+  syncWorkflowGraph(wf) {
+    set({ workflow: wf });
+  },
+
+  resetWorkflowForReplay(wf) {
+    set({
+      workflow: wf,
+      nodeStates: freshNodeStates(wf),
+      prunedEdgeIds: new Set(),
+      logs: [],
+      runStatus: "idle",
+      selectedNodeId: null,
+      selectedEdgeId: null,
     });
   },
 
@@ -50,8 +77,10 @@ export const useStore = create<State>((set, get) => ({
     set({
       runStatus: "idle",
       nodeStates: wf ? freshNodeStates(wf) : {},
+      prunedEdgeIds: new Set(),
       logs: [],
       selectedNodeId: null,
+      selectedEdgeId: null,
     });
   },
 
@@ -60,12 +89,17 @@ export const useStore = create<State>((set, get) => ({
   },
 
   selectNode(id) {
-    set({ selectedNodeId: id });
+    set({ selectedNodeId: id, selectedEdgeId: null });
+  },
+
+  selectEdge(id) {
+    set({ selectedEdgeId: id, selectedNodeId: null });
   },
 
   applyEvent(ev) {
     const prevLogs = get().logs;
     const prevStates = get().nodeStates;
+    const prevPruned = get().prunedEdgeIds;
     const next: Partial<State> = {
       logs: [...prevLogs, ev],
     };
@@ -75,7 +109,9 @@ export const useStore = create<State>((set, get) => ({
         const wf = get().workflow;
         next.runStatus = "running";
         next.nodeStates = wf ? freshNodeStates(wf) : {};
+        next.prunedEdgeIds = new Set();
         next.selectedNodeId = null;
+        next.selectedEdgeId = null;
         break;
       }
       case "node_started": {
@@ -89,6 +125,7 @@ export const useStore = create<State>((set, get) => ({
               message: undefined,
               output: undefined,
               error: undefined,
+              mergeWaiting: undefined,
             },
           };
         }
@@ -114,6 +151,7 @@ export const useStore = create<State>((set, get) => ({
               status: "success",
               message: undefined,
               output: ev.output,
+              mergeWaiting: undefined,
             },
           };
         }
@@ -129,12 +167,55 @@ export const useStore = create<State>((set, get) => ({
               status: "error",
               message: ev.error ?? ev.message,
               error: ev.error,
+              mergeWaiting: undefined,
             },
           };
         }
         break;
       }
+      case "node_skipped": {
+        if (ev.node_id) {
+          next.nodeStates = {
+            ...prevStates,
+            [ev.node_id]: {
+              status: "skipped",
+              message: ev.message,
+            },
+          };
+        }
+        break;
+      }
+      case "merge_waiting": {
+        if (ev.node_id) {
+          const prev = prevStates[ev.node_id] ?? { status: "idle" };
+          const arrived = ev.arrived ?? 0;
+          const expected = ev.expected ?? 0;
+          next.nodeStates = {
+            ...prevStates,
+            [ev.node_id]: {
+              ...prev,
+              status: "waiting",
+              mergeWaiting: { arrived, expected },
+              message: undefined,
+            },
+          };
+        }
+        break;
+      }
+      case "branch_pruned": {
+        const edgeId = ev.edge_id;
+        if (edgeId) {
+          const pruned = new Set(prevPruned);
+          pruned.add(edgeId);
+          next.prunedEdgeIds = pruned;
+        }
+        break;
+      }
       case "run_completed": {
+        next.runStatus = "completed";
+        break;
+      }
+      case "run_completed_with_errors": {
         next.runStatus = "completed";
         break;
       }

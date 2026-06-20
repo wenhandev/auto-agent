@@ -1,12 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2 } from "lucide-react";
 import { apiClient, ApiError } from "@/api-platform";
+import {
+  CredentialFieldForm,
+  type CredentialFieldValue,
+} from "@/components/CredentialFieldForm";
+import { OAuthConnectButton } from "@/components/OAuthConnectButton";
 import type {
   CredentialCreate,
   CredentialListItem,
   CredentialOut,
+  CredentialTypeSpec,
 } from "@/types-platform";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -34,6 +47,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const QK_LIST = ["credentials", "list"] as const;
+const QK_TYPES = ["credentials", "types"] as const;
 const QK_DETAIL = (id: string) => ["credentials", "detail", id] as const;
 
 interface FieldRow {
@@ -59,13 +73,30 @@ function copyToClipboard(text: string) {
   }
 }
 
+function emptyTypedValues(
+  spec: CredentialTypeSpec | undefined,
+): Record<string, CredentialFieldValue> {
+  if (!spec) return {};
+  const out: Record<string, CredentialFieldValue> = {};
+  for (const f of spec.fields) {
+    out[f.name] = {
+      value: f.default != null ? String(f.default) : "",
+      maskedFromServer: null,
+    };
+  }
+  return out;
+}
+
 interface ModalProps {
   open: boolean;
   initialName?: string;
   initialDescription?: string;
+  initialType?: string;
   initialFields?: FieldRow[];
+  initialTypedValues?: Record<string, CredentialFieldValue>;
   credentialName: string;
   editingId: string | null;
+  credentialTypes: CredentialTypeSpec[];
   onClose(): void;
   onSubmit(payload: CredentialCreate): Promise<void>;
   submitting: boolean;
@@ -76,9 +107,12 @@ function CredentialModal({
   open,
   initialName = "",
   initialDescription = "",
+  initialType = "generic",
   initialFields,
+  initialTypedValues,
   credentialName,
   editingId,
+  credentialTypes,
   onClose,
   onSubmit,
   submitting,
@@ -87,23 +121,53 @@ function CredentialModal({
   const { t } = useTranslation();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
+  const [credType, setCredType] = useState(initialType);
   const [rows, setRows] = useState<FieldRow[]>(
     initialFields && initialFields.length > 0
       ? initialFields
       : [{ key: "", value: "", maskedFromServer: null }],
   );
+  const [typedValues, setTypedValues] = useState<
+    Record<string, CredentialFieldValue>
+  >(initialTypedValues ?? {});
   const [error, setError] = useState<string | null>(null);
+
+  const typeSpec = useMemo(
+    () => credentialTypes.find((ct) => ct.type === credType),
+    [credentialTypes, credType],
+  );
+  const isGeneric = credType === "generic";
+  const isOAuth = typeSpec?.auth.strategy === "oauth2";
+  const connectApp = typeSpec?.auth.connect_app ?? null;
 
   useEffect(() => {
     setName(initialName);
     setDescription(initialDescription);
+    setCredType(initialType);
     setRows(
       initialFields && initialFields.length > 0
         ? initialFields
         : [{ key: "", value: "", maskedFromServer: null }],
     );
+    setTypedValues(initialTypedValues ?? emptyTypedValues(typeSpec));
     setError(null);
-  }, [initialName, initialDescription, initialFields]);
+  }, [
+    initialName,
+    initialDescription,
+    initialType,
+    initialFields,
+    initialTypedValues,
+    typeSpec,
+  ]);
+
+  function onTypeChange(nextType: string) {
+    setCredType(nextType);
+    const spec = credentialTypes.find((ct) => ct.type === nextType);
+    setTypedValues(emptyTypedValues(spec));
+    if (nextType === "generic") {
+      setRows([{ key: "", value: "", maskedFromServer: null }]);
+    }
+  }
 
   function updateRow(idx: number, patch: Partial<FieldRow>) {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
@@ -120,6 +184,16 @@ function CredentialModal({
     setRows((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  function updateTypedField(
+    fieldName: string,
+    patch: Partial<CredentialFieldValue>,
+  ) {
+    setTypedValues((prev) => ({
+      ...prev,
+      [fieldName]: { ...prev[fieldName], ...patch },
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -128,19 +202,33 @@ function CredentialModal({
       setError(t("pages.credentials.nameRequired"));
       return;
     }
+
     const fields: Record<string, string> = {};
-    for (const r of rows) {
-      const key = r.key.trim();
-      if (!key) continue;
-      if (editingId && !r.value && r.maskedFromServer) {
-        continue;
+    if (isGeneric) {
+      for (const r of rows) {
+        const key = r.key.trim();
+        if (!key) continue;
+        if (editingId && !r.value && r.maskedFromServer) continue;
+        fields[key] = r.value;
       }
-      fields[key] = r.value;
+    } else if (typeSpec) {
+      for (const f of typeSpec.fields) {
+        const row = typedValues[f.name];
+        if (!row) continue;
+        if (editingId && !row.value && row.maskedFromServer) continue;
+        if (f.required && !row.value && !row.maskedFromServer) {
+          setError(`${f.label || f.name} is required`);
+          return;
+        }
+        if (row.value) fields[f.name] = row.value;
+      }
     }
+
     try {
       await onSubmit({
         name: trimmedName,
         description: description.trim() || null,
+        type: credType,
         fields,
       });
     } catch (err) {
@@ -184,73 +272,128 @@ function CredentialModal({
             />
           </div>
           <div className="grid gap-2">
-            <Label>{t("pages.credentials.fieldsLabel")}</Label>
-            <div className="space-y-2">
-              {rows.map((row, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-2"
-                >
-                  <Input
-                    placeholder={t("pages.credentials.fieldNamePlaceholder")}
-                    value={row.key}
-                    onChange={(e) => updateRow(i, { key: e.target.value })}
-                  />
-                  <Input
-                    placeholder={
-                      editingId && row.maskedFromServer
-                        ? t("pages.credentials.keepValue", {
-                            masked: row.maskedFromServer,
-                          })
-                        : t("pages.credentials.valuePlaceholder")
-                    }
-                    value={row.value}
-                    onChange={(e) => updateRow(i, { value: e.target.value })}
-                    type="password"
-                  />
-                  <div className="min-w-[120px]">
-                    {row.key.trim() && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            className="cursor-pointer rounded border bg-muted px-2 py-1 font-mono text-[11px] text-muted-foreground hover:border-primary hover:text-foreground"
-                            onClick={() =>
-                              copyToClipboard(
-                                toTokenSnippet(effectiveName, row.key.trim()),
-                              )
-                            }
-                          >
-                            {toTokenSnippet(effectiveName, row.key.trim())}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {t("pages.workflowDetail.credentialsCopyToken")}
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeRow(i)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="self-start"
-              onClick={addRow}
+            <Label>{t("pages.credentials.typeLabel")}</Label>
+            <Select
+              value={credType}
+              onValueChange={onTypeChange}
+              disabled={!!editingId}
             >
-              {t("pages.credentials.addRow")}
-            </Button>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {credentialTypes.map((ct) => (
+                  <SelectItem key={ct.type} value={ct.type}>
+                    {ct.label || ct.type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {isGeneric ? (
+            <div className="grid gap-2">
+              <Label>{t("pages.credentials.fieldsLabel")}</Label>
+              <div className="space-y-2">
+                {rows.map((row, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-2"
+                  >
+                    <Input
+                      placeholder={t(
+                        "pages.credentials.fieldNamePlaceholder",
+                      )}
+                      value={row.key}
+                      onChange={(e) =>
+                        updateRow(i, { key: e.target.value })
+                      }
+                    />
+                    <Input
+                      placeholder={
+                        editingId && row.maskedFromServer
+                          ? t("pages.credentials.keepValue", {
+                              masked: row.maskedFromServer,
+                            })
+                          : t("pages.credentials.valuePlaceholder")
+                      }
+                      value={row.value}
+                      onChange={(e) =>
+                        updateRow(i, { value: e.target.value })
+                      }
+                      type="password"
+                    />
+                    <div className="min-w-[120px]">
+                      {row.key.trim() && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="cursor-pointer rounded border bg-muted px-2 py-1 font-mono text-[11px] text-muted-foreground hover:border-primary hover:text-foreground"
+                              onClick={() =>
+                                copyToClipboard(
+                                  toTokenSnippet(
+                                    effectiveName,
+                                    row.key.trim(),
+                                  ),
+                                )
+                              }
+                            >
+                              {toTokenSnippet(effectiveName, row.key.trim())}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {t("pages.workflowDetail.credentialsCopyToken")}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeRow(i)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={addRow}
+              >
+                {t("pages.credentials.addRow")}
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              <Label>{t("pages.credentials.fieldsLabel")}</Label>
+              <CredentialFieldForm
+                fields={typeSpec?.fields ?? []}
+                values={typedValues}
+                onChange={updateTypedField}
+                credentialName={effectiveName}
+                editing={!!editingId}
+              />
+            </div>
+          )}
+
+          {isOAuth && connectApp && editingId && (
+            <div className="grid gap-2 border-t pt-3">
+              <p className="text-xs text-muted-foreground">
+                {t("pages.credentials.oauthHint")}
+              </p>
+              <OAuthConnectButton
+                connectApp={connectApp}
+                credentialId={editingId}
+              />
+            </div>
+          )}
+
           {error && <div className="text-sm text-destructive">{error}</div>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
@@ -271,7 +414,9 @@ interface EditState {
   credentialId: string | null;
   initialName: string;
   initialDescription: string;
+  initialType: string;
   initialFields: FieldRow[];
+  initialTypedValues: Record<string, CredentialFieldValue>;
 }
 
 export function CredentialsListPage() {
@@ -284,33 +429,62 @@ export function CredentialsListPage() {
     queryFn: () => apiClient.credentials.list(),
   });
 
+  const typesQuery = useQuery({
+    queryKey: QK_TYPES,
+    queryFn: () => apiClient.credentials.listTypes(),
+  });
+
   const detailQuery = useQuery({
     queryKey: QK_DETAIL(edit?.credentialId ?? ""),
     queryFn: () => apiClient.credentials.get(edit!.credentialId!),
     enabled: edit?.mode === "edit" && !!edit.credentialId,
   });
 
+  const credentialTypes = typesQuery.data ?? [];
+
   useEffect(() => {
     if (edit?.mode === "edit" && detailQuery.data) {
+      const detail = detailQuery.data;
+      const typeSpec = credentialTypes.find((ct) => ct.type === detail.type);
       setEdit((prev) => {
-        if (!prev || prev.credentialId !== detailQuery.data!.id) return prev;
-        const fields: FieldRow[] = detailQuery.data!.fields.map((f) => ({
-          key: f.name,
-          value: "",
-          maskedFromServer: f.masked_value,
-        }));
+        if (!prev || prev.credentialId !== detail.id) return prev;
+        if (detail.type === "generic" || !typeSpec) {
+          const fields: FieldRow[] = detail.fields.map((f) => ({
+            key: f.name,
+            value: "",
+            maskedFromServer: f.masked_value,
+          }));
+          return {
+            ...prev,
+            initialName: detail.name,
+            initialDescription: detail.description ?? "",
+            initialType: detail.type,
+            initialFields:
+              fields.length > 0
+                ? fields
+                : [{ key: "", value: "", maskedFromServer: null }],
+            initialTypedValues: {},
+          };
+        }
+        const typed: Record<string, CredentialFieldValue> = {};
+        for (const f of typeSpec.fields) {
+          const masked = detail.fields.find((mf) => mf.name === f.name);
+          typed[f.name] = {
+            value: "",
+            maskedFromServer: masked?.masked_value ?? null,
+          };
+        }
         return {
           ...prev,
-          initialName: detailQuery.data!.name,
-          initialDescription: detailQuery.data!.description ?? "",
-          initialFields:
-            fields.length > 0
-              ? fields
-              : [{ key: "", value: "", maskedFromServer: null }],
+          initialName: detail.name,
+          initialDescription: detail.description ?? "",
+          initialType: detail.type,
+          initialFields: [],
+          initialTypedValues: typed,
         };
       });
     }
-  }, [detailQuery.data, edit?.mode]);
+  }, [detailQuery.data, edit?.mode, credentialTypes]);
 
   const createMut = useMutation({
     mutationFn: (body: CredentialCreate) =>
@@ -342,7 +516,9 @@ export function CredentialsListPage() {
       credentialId: null,
       initialName: "",
       initialDescription: "",
+      initialType: "generic",
       initialFields: [{ key: "", value: "", maskedFromServer: null }],
+      initialTypedValues: {},
     });
   }
 
@@ -352,11 +528,13 @@ export function CredentialsListPage() {
       credentialId: item.id,
       initialName: item.name,
       initialDescription: item.description ?? "",
+      initialType: item.type,
       initialFields: item.field_names.map((n) => ({
         key: n,
         value: "",
         maskedFromServer: "\u2022\u2022\u2022\u2022",
       })),
+      initialTypedValues: {},
     });
   }
 
@@ -379,6 +557,14 @@ export function CredentialsListPage() {
 
   const items = listQuery.data ?? [];
   const error = listQuery.error;
+
+  const typeLabelByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ct of credentialTypes) {
+      map.set(ct.type, ct.label || ct.type);
+    }
+    return map;
+  }, [credentialTypes]);
 
   return (
     <div className="flex h-full flex-col overflow-auto">
@@ -423,6 +609,7 @@ export function CredentialsListPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("pages.credentials.table.name")}</TableHead>
+                  <TableHead>{t("pages.credentials.typeLabel")}</TableHead>
                   <TableHead>
                     {t("pages.credentials.table.description")}
                   </TableHead>
@@ -461,6 +648,9 @@ export function CredentialsListPage() {
                             </TooltipContent>
                           </Tooltip>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {typeLabelByName.get(item.type) ?? item.type}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {item.description ?? t("common.dash")}
@@ -528,7 +718,10 @@ export function CredentialsListPage() {
         credentialName={edit?.initialName ?? ""}
         initialName={edit?.initialName ?? ""}
         initialDescription={edit?.initialDescription ?? ""}
+        initialType={edit?.initialType ?? "generic"}
         initialFields={edit?.initialFields}
+        initialTypedValues={edit?.initialTypedValues}
+        credentialTypes={credentialTypes}
         onClose={() => setEdit(null)}
         onSubmit={handleSubmit}
         submitting={createMut.isPending || updateMut.isPending}

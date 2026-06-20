@@ -1,0 +1,123 @@
+{
+  "app": "google_sheets",
+  "version": "1.0.0",
+  "credentials": ["google_sheets_oauth2"],
+  "resources": [
+    {
+      "name": "values",
+      "label": "Values",
+      "operations": [
+        {
+          "name": "get",
+          "label": "Get Values",
+          "fields": [
+            {"name": "spreadsheet_id", "label": "Spreadsheet ID", "kind": "string", "required": true},
+            {"name": "sheet", "label": "Sheet", "kind": "string", "required": false},
+            {"name": "range", "label": "Range (A1)", "kind": "string", "required": false, "default": "A1:Z"},
+            {
+              "name": "as_objects",
+              "label": "Return rows as objects",
+              "kind": "boolean",
+              "required": false,
+              "default": false
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "https://sheets.googleapis.com/v4/spreadsheets/{{$fields.spreadsheet_id}}/values/Sheet1!A1:Z"
+          },
+          "response": {"root_path": ""}
+        },
+        {
+          "name": "append",
+          "label": "Append Values",
+          "fields": [
+            {"name": "spreadsheet_id", "label": "Spreadsheet ID", "kind": "string", "required": true},
+            {"name": "sheet", "label": "Sheet", "kind": "string", "required": false},
+            {"name": "range", "label": "Range (A1)", "kind": "string", "required": false, "default": "A1"},
+            {
+              "name": "values",
+              "label": "Values (rows)",
+              "kind": "json",
+              "required": true
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://sheets.googleapis.com/v4/spreadsheets/{{$fields.spreadsheet_id}}/values/Sheet1!A1:append",
+            "headers": {"Content-Type": "application/json"},
+            "query": {
+              "valueInputOption": "USER_ENTERED",
+              "insertDataOption": "INSERT_ROWS"
+            },
+            "body": {
+              "values": "{{$fields.values}}"
+            }
+          },
+          "response": {"root_path": "updates"}
+        },
+        {
+          "name": "update",
+          "label": "Update Values",
+          "fields": [
+            {"name": "spreadsheet_id", "label": "Spreadsheet ID", "kind": "string", "required": true},
+            {"name": "sheet", "label": "Sheet", "kind": "string", "required": false},
+            {"name": "range", "label": "Range (A1)", "kind": "string", "required": true},
+            {
+              "name": "values",
+              "label": "Values (rows)",
+              "kind": "json",
+              "required": true
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": "https://sheets.googleapis.com/v4/spreadsheets/{{$fields.spreadsheet_id}}/values/Sheet1!A1",
+            "headers": {"Content-Type": "application/json"},
+            "query": {"valueInputOption": "USER_ENTERED"},
+            "body": {
+              "values": "{{$fields.values}}"
+            }
+          },
+          "response": {"root_path": "updates"}
+        },
+        {
+          "name": "clear",
+          "label": "Clear Values",
+          "fields": [
+            {"name": "spreadsheet_id", "label": "Spreadsheet ID", "kind": "string", "required": true},
+            {"name": "sheet", "label": "Sheet", "kind": "string", "required": false},
+            {"name": "range", "label": "Range (A1)", "kind": "string", "required": true}
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://sheets.googleapis.com/v4/spreadsheets/{{$fields.spreadsheet_id}}/values/Sheet1!A1:clear"
+          },
+          "response": {"root_path": "clearedRange"}
+        }
+      ]
+    },
+    {
+      "name": "spreadsheets",
+      "label": "Spreadsheets",
+      "operations": [
+        {
+          "name": "create",
+          "label": "Create Spreadsheet",
+          "fields": [
+            {"name": "title", "label": "Title", "kind": "string", "required": true}
+          ],
+          "request": {
+            "method": "POST",
+            "url": "https://sheets.googleapis.com/v4/spreadsheets",
+            "headers": {"Content-Type": "application/json"},
+            "body": {
+              "properties": {"title": "{{$fields.title}}"}
+            }
+          },
+          "response": {"root_path": ""}
+        }
+      ]
+    }
+  ]
+}

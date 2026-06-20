@@ -1,0 +1,32 @@
+{
+  "name": "IF Branch Example",
+  "description": "Demonstrates condition (IF) branching on a predicate",
+  "workflow": {
+    "nodes": [
+      {"id": "start", "type": "start", "label": "Start", "params": {}},
+      {
+        "id": "check",
+        "type": "condition",
+        "label": "IF status OK",
+        "params": {
+          "predicate": {
+            "left": "{{nodes.http.output.status}}",
+            "op": "<",
+            "right": 400
+          }
+        }
+      },
+      {"id": "ok", "type": "wait", "label": "Success path", "params": {"ms": 100}},
+      {"id": "err", "type": "wait", "label": "Error path", "params": {"ms": 100}},
+      {"id": "end", "type": "end", "label": "End", "params": {}}
+    ],
+    "edges": [
+      {"id": "e0", "source": "start", "target": "check"},
+      {"id": "e1", "source": "check", "target": "ok", "when": "true"},
+      {"id": "e2", "source": "check", "target": "err", "when": "false"},
+      {"id": "e3", "source": "ok", "target": "end"},
+      {"id": "e4", "source": "err", "target": "end"}
+    ],
+    "start_id": "start"
+  }
+}

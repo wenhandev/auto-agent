@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "auto-agent": {
+      "command": "python",
+      "args": ["-m", "auto_agent_mcp.server"],
+      "env": {
+        "AUTO_AGENT_BASE_URL": "http://localhost:8000",
+        "AUTO_AGENT_API_KEY": "sk_your_api_key_here"
+      }
+    }
+  }
+}

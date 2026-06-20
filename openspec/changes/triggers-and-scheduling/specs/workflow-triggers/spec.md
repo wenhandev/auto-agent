@@ -12,7 +12,7 @@ Triggers are owned by exactly one workflow. Multiple triggers per workflow are a
 - **As an operator**, I can disable a trigger without deleting it, and re-enable it later without touching the schedule or URL.
 - **As an operator**, I can regenerate a webhook secret when I suspect it leaked, without changing the URL path.
 
-## Functional requirements
+## ADDED Requirements
 
 ### Requirement: Trigger entity per workflow
 

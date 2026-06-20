@@ -12,7 +12,7 @@ Three composite-flow node primitives are added: `foreach` (iterates a list and r
 - **As an operator**, I want a hard cap on `foreach` iterations so a runaway loop doesn't lock the queue for hours.
 - **As an operator**, I want a workflow that calls itself recursively to fail with a clear error rather than crash the backend.
 
-## Functional requirements
+## ADDED Requirements
 
 ### Requirement: `foreach` Node
 
