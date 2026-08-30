@@ -22,6 +22,10 @@ const DEFAULT_LABELS: Partial<Record<NodeType, string>> = {
   wait: "Wait",
   extract: "Extract",
   fuzzy_action: "Fuzzy action",
+  desktop_open: "Desktop open",
+  desktop_act: "Desktop act",
+  desktop_navigate: "Desktop navigate",
+  desktop_extract: "Desktop extract",
   set: "Set",
   filter: "Filter",
   merge: "Merge",
@@ -41,6 +45,14 @@ function defaultParams(type: NodeType): Record<string, unknown> {
       return { instruction: "" };
     case "fuzzy_action":
       return { action: "" };
+    case "desktop_open":
+      return { app: "" };
+    case "desktop_act":
+      return { app: "", instruction: "" };
+    case "desktop_navigate":
+      return { app: "", goal: "", max_steps: 10 };
+    case "desktop_extract":
+      return { app: "", instruction: "" };
     case "set":
       return { values: {} };
     case "filter":
@@ -86,7 +98,7 @@ function findConnectionSource(
   return startId;
 }
 
-export type PaletteGroup = "browser" | "flow" | "data";
+export type PaletteGroup = "browser" | "desktop" | "flow" | "data";
 
 export interface PaletteNodeType {
   type: NodeType;
@@ -101,6 +113,10 @@ export const INSERTABLE_ACTION_TYPES: PaletteNodeType[] = [
   { type: "wait", group: "browser", labelKey: "wait" },
   { type: "extract", group: "browser", labelKey: "extract" },
   { type: "fuzzy_action", group: "browser", labelKey: "fuzzyAction" },
+  { type: "desktop_open", group: "desktop", labelKey: "desktopOpen" },
+  { type: "desktop_act", group: "desktop", labelKey: "desktopAct" },
+  { type: "desktop_navigate", group: "desktop", labelKey: "desktopNavigate" },
+  { type: "desktop_extract", group: "desktop", labelKey: "desktopExtract" },
   { type: "set", group: "data", labelKey: "set" },
   { type: "filter", group: "data", labelKey: "filter" },
   { type: "merge", group: "data", labelKey: "merge" },

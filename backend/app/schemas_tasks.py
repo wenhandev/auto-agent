@@ -11,6 +11,8 @@ RunMode = Literal["graph", "autonomous"]
 DEFAULT_MAX_STEPS = 30
 DEFAULT_MAX_SECONDS = 300
 
+# Browser-centric default. Desktop tools are opt-in via TaskSpec.allowed_tools
+# (or an explicit desktop-oriented allowlist).
 DEFAULT_ALLOWED_TOOLS: list[str] = [
     "navigate",
     "click_element",
@@ -25,6 +27,18 @@ DEFAULT_ALLOWED_TOOLS: list[str] = [
     "http_request",
 ]
 
+DEFAULT_DESKTOP_ALLOWED_TOOLS: list[str] = [
+    "list_apps",
+    "open_app",
+    "get_app_state",
+    "desktop_click",
+    "desktop_type",
+    "desktop_key",
+    "desktop_scroll",
+    "finish",
+    "wait",
+]
+
 VISION_TOOLS = frozenset({
     "navigate",
     "click_element",
@@ -36,6 +50,16 @@ VISION_TOOLS = frozenset({
     "wait",
     "extract",
     "finish",
+})
+
+DESKTOP_TOOLS = frozenset({
+    "list_apps",
+    "open_app",
+    "get_app_state",
+    "desktop_click",
+    "desktop_type",
+    "desktop_key",
+    "desktop_scroll",
 })
 
 NODE_TOOLS = frozenset({
@@ -95,7 +119,9 @@ __all__ = [
     "DEFAULT_MAX_STEPS",
     "DEFAULT_MAX_SECONDS",
     "DEFAULT_ALLOWED_TOOLS",
+    "DEFAULT_DESKTOP_ALLOWED_TOOLS",
     "VISION_TOOLS",
+    "DESKTOP_TOOLS",
     "NODE_TOOLS",
     "TaskSpec",
     "TaskResult",

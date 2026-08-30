@@ -62,6 +62,10 @@ Node types and params:
   extract:      params: { "instruction": str }
   vision_navigate: params: { "goal": str, "max_steps"?: int, "success_criteria"?: str }
   vision_act:   params: { "instruction": str }
+  desktop_open: params: { "app": str }
+  desktop_act: params: { "app": str, "instruction": str }
+  desktop_navigate: params: { "app": str, "goal": str, "max_steps"?: int }
+  desktop_extract: params: { "app": str, "instruction": str, "schema"?: object }
   vision_extract: params: { "instruction": str, "schema"?: object }
   fuzzy_action: params: { "instruction": str }  # alias of vision_navigate
   login:        params: { "credential": str, "url"?: str, "success_criteria"?: str,

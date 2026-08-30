@@ -15,8 +15,10 @@ interface StreamFrame {
 interface Props {
   runId: string;
   active: boolean;
-  /** Override WebSocket URL (desktop sidecar stream). */
+  /** Override WebSocket URL (web cloud stream). */
   streamWsUrl?: string;
+  /** Desktop monolith: stream frames via Tauri invoke relay. */
+  runtimeRelay?: boolean;
 }
 
 type StreamState =
@@ -28,7 +30,7 @@ type StreamState =
   | "unavailable"
   | "headed";
 
-export function LiveStreamPanel({ runId, active, streamWsUrl }: Props) {
+export function LiveStreamPanel({ runId, active, streamWsUrl, runtimeRelay }: Props) {
   const { t } = useTranslation();
   const wsRef = useRef<WebSocket | null>(null);
   const frameSizeRef = useRef<{ w: number; h: number } | null>(null);
@@ -38,6 +40,15 @@ export function LiveStreamPanel({ runId, active, streamWsUrl }: Props) {
   );
   const [frameSrc, setFrameSrc] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [userDriving, setUserDriving] = useState(false);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+
+  const sendViewer = (payload: Record<string, unknown>) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(payload));
+    }
+  };
 
   useEffect(() => {
     if (!active) {
@@ -46,8 +57,59 @@ export function LiveStreamPanel({ runId, active, streamWsUrl }: Props) {
       frameSizeRef.current = null;
       setFrameSize(null);
       setFrameSrc(null);
+      setUserDriving(false);
       setState("idle");
       return;
+    }
+
+    if (runtimeRelay) {
+      let cancelled = false;
+      let cleanup: (() => void | Promise<void>) | null = null;
+      void import("@/client/runtimeBridge").then(({ subscribeStreamFrames }) => {
+        if (cancelled) return;
+        void subscribeStreamFrames(runId, (payload) => {
+          if (payload.type === "stream_ended") {
+            setState("ended");
+            return;
+          }
+          if (payload.type === "stream_headed") {
+            setState("headed");
+            return;
+          }
+          if (payload.type === "stream_waiting") {
+            setState("waiting");
+            return;
+          }
+          if (payload.type === "stream_unavailable") {
+            setState("unavailable");
+            return;
+          }
+          if (payload.type === "frame" && typeof payload.data === "string") {
+            setState("live");
+            setFrameSrc(`data:image/jpeg;base64,${payload.data}`);
+            if (
+              typeof payload.width === "number" &&
+              typeof payload.height === "number" &&
+              frameSizeRef.current === null
+            ) {
+              const next = { w: payload.width, h: payload.height };
+              frameSizeRef.current = next;
+              setFrameSize(next);
+            }
+          }
+        }).then((unsub) => {
+          if (cancelled) {
+            void unsub();
+            return;
+          }
+          cleanup = unsub;
+          setState("connecting");
+        });
+      });
+      return () => {
+        cancelled = true;
+        void cleanup?.();
+      };
     }
 
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -66,7 +128,12 @@ export function LiveStreamPanel({ runId, active, streamWsUrl }: Props) {
       try {
         const payload = JSON.parse(msg.data as string) as {
           type?: string;
+          holder?: string;
         } & Partial<StreamFrame>;
+        if (payload.type === "control") {
+          setUserDriving(payload.holder === "user");
+          return;
+        }
         if (payload.type === "stream_ended") {
           setState("ended");
           return;
@@ -110,7 +177,7 @@ export function LiveStreamPanel({ runId, active, streamWsUrl }: Props) {
       ws.close();
       wsRef.current = null;
     };
-  }, [runId, active, streamWsUrl]);
+  }, [runId, active, streamWsUrl, runtimeRelay]);
 
   const badgeLabel =
     state === "live"
@@ -142,8 +209,53 @@ export function LiveStreamPanel({ runId, active, streamWsUrl }: Props) {
           <Badge variant="outline" className="ml-auto text-[10px]">
             {badgeLabel}
           </Badge>
+          {active && !runtimeRelay && state === "live" && (
+            <button
+              type="button"
+              className="rounded border px-2 py-0.5 text-[10px]"
+              onClick={() => {
+                const next = userDriving ? "agent" : "user";
+                setUserDriving(next === "user");
+                sendViewer({ type: "set_control", holder: next });
+              }}
+            >
+              {userDriving ? t("livestream.giveBack") : t("livestream.takeControl")}
+            </button>
+          )}
         </div>
-        <div className="relative aspect-video w-full bg-muted/40">
+        {userDriving && (
+          <div className="px-3 pb-1 text-[10px] text-muted-foreground">
+            {t("livestream.youAreDriving")}
+          </div>
+        )}
+        <div
+          ref={surfaceRef}
+          className="relative aspect-video w-full bg-muted/40"
+          onPointerDown={(e) => {
+            if (!userDriving || !surfaceRef.current) return;
+            const r = surfaceRef.current.getBoundingClientRect();
+            sendViewer({
+              type: "input",
+              kind: "mouse",
+              event: "pressed",
+              x: (e.clientX - r.left) / r.width,
+              y: (e.clientY - r.top) / r.height,
+              clicks: 1,
+            });
+          }}
+          onPointerUp={(e) => {
+            if (!userDriving || !surfaceRef.current) return;
+            const r = surfaceRef.current.getBoundingClientRect();
+            sendViewer({
+              type: "input",
+              kind: "mouse",
+              event: "released",
+              x: (e.clientX - r.left) / r.width,
+              y: (e.clientY - r.top) / r.height,
+              clicks: 1,
+            });
+          }}
+        >
           {!active ? (
             <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-muted-foreground">
               {t("livestream.notRunning")}
@@ -153,10 +265,16 @@ export function LiveStreamPanel({ runId, active, streamWsUrl }: Props) {
               <button
                 type="button"
                 className="absolute inset-0 flex items-center justify-center disabled:cursor-default"
-                disabled={!canPreview}
-                title={canPreview ? t("imagePreview.clickToEnlarge") : undefined}
+                disabled={!canPreview || userDriving}
+                title={
+                  userDriving
+                    ? t("livestream.youAreDriving")
+                    : canPreview
+                      ? t("imagePreview.clickToEnlarge")
+                      : undefined
+                }
                 onClick={() => {
-                  if (canPreview) setPreviewOpen(true);
+                  if (!userDriving && canPreview) setPreviewOpen(true);
                 }}
               >
                 {frameSrc ? (

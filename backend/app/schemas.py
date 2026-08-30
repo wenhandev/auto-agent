@@ -16,6 +16,10 @@ NodeType = Literal[
     "vision_navigate",
     "vision_act",
     "vision_extract",
+    "desktop_open",
+    "desktop_act",
+    "desktop_navigate",
+    "desktop_extract",
     "condition",
     "switch",
     "merge",
@@ -206,6 +210,9 @@ class Node(BaseModel):
             "wait->{ms}, extract->{instruction}, fuzzy_action->{instruction}, "
             "vision_navigate->{goal,max_steps?,success_criteria?}, "
             "vision_act->{instruction}, vision_extract->{instruction,schema?}, "
+            "desktop_open->{app}, desktop_act->{app,instruction}, "
+            "desktop_navigate->{app,goal,max_steps?}, "
+            "desktop_extract->{app,instruction,schema?}, "
             "condition->{expr}."
         ),
     )

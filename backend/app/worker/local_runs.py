@@ -238,7 +238,6 @@ class LocalRunManager:
                         )
                         seq += 1
                         frame = {
-                            "type": "frame",
                             "seq": seq,
                             "data": base64.b64encode(raw).decode("ascii"),
                             "width": settings.browser_viewport_width,

@@ -32,7 +32,7 @@
     "platformAdmin": "平台管理",
     "clientDownload": "下载客户端",
     "brand": "Auto Agent",
-    "footer": "本地单用户 POC",
+    "footer": "云端管理控制台",
     "collapseSidebar": "收起侧边栏",
     "expandSidebar": "展开侧边栏"
   },
@@ -57,8 +57,10 @@
     "workflows": {
       "title": "工作流",
       "subtitle": "workflows",
+      "subtitleWeb": "查看并运行已发布的工作流。请在桌面客户端中创建与编辑。",
       "empty": "还没有工作流",
       "emptyHint": "点击下面创建你的第一个工作流",
+      "emptyHintWeb": "尚无已发布的工作流。请在桌面客户端创建工作流并发布到云端。",
       "createCta": "新建工作流",
       "newButton": "新建",
       "noDescription": "暂无描述",
@@ -171,13 +173,19 @@
       "noObjective": "无目标",
       "summary": "结果",
       "plan": "计划",
-      "actions": "浏览器操作",
-      "noActions": "本次运行没有记录任何浏览器操作。",
+      "actions": "Agent 操作",
+      "noActions": "本次运行没有记录任何视觉或桌面操作。",
+      "desktopStep": "桌面",
+      "visionStep": "视觉",
       "resultSuccess": "成功",
       "resultFailed": "失败",
       "failureReason": "失败原因",
       "running": "运行中",
-      "stepsTaken": "已执行 {{count}} 步"
+      "stepsTaken": "已执行 {{count}} 步",
+      "routeSkillsTitle": "Route Skill 提案",
+      "distillRouteSkills": "蒸馏 Route Skill",
+      "distilling": "蒸馏中...",
+      "proposalsEmpty": "点击「蒸馏 Route Skill」从本次成功运行生成可采纳的站点操作知识。"
     },
     "members": {
       "title": "组织成员",
@@ -223,6 +231,19 @@
       "tabWorkers": "Worker",
       "tabApi": "API 密钥",
       "tabWebhooks": "Webhooks",
+      "tabRouteSkills": "Route Skills",
+      "routeSkillsTitle": "Route Skills",
+      "routeSkillsDescription": "按 URL 注入的 prompt 知识，会在自主浏览器任务中生效。采纳蒸馏提案后，请在此启用。",
+      "routeSkillsEmpty": "尚无 Route Skill。可从录制或成功的自主任务中采纳提案。",
+      "routeSkillsUrl": "URL 模式",
+      "routeSkillsScope": "作用域",
+      "routeSkillsEnabled": "启用",
+      "routeSkillsActions": "操作",
+      "routeSkillsViewBuckets": "按站点",
+      "routeSkillsViewList": "全部技能",
+      "routeSkillsCapability": "能力",
+      "routeSkillsPending": "待处理",
+      "routeSkillsNotAdopted": "未采纳",
       "languageSectionTitle": "界面语言",
       "languageDescription": "选择界面显示的语言",
       "languageLabel": "语言",
@@ -337,7 +358,44 @@
         "run_rejected": "运行被拒绝",
         "run_aborted": "运行已中止",
         "approval_requested": "请求审批"
-      }
+      },
+      "workersPolicyTitle": "客户端策略",
+      "workersPolicyDescription": "控制 Auto Agent Client 的注册与执行权限（仅管理员）。",
+      "workersPolicyLabel": "策略",
+      "workersPolicyApprovalRequired": "需要管理员批准",
+      "workersPolicyApprovalRequiredDesc": "新设备登录后需管理员批准才能执行任务（推荐）。",
+      "workersPolicyOpen": "自动批准",
+      "workersPolicyOpenDesc": "设备首次登录后自动批准（开发/小团队）。",
+      "workersPolicyDisabled": "禁用客户端",
+      "workersPolicyDisabledDesc": "禁止客户端登录与连接。",
+      "workersPolicyLoadError": "无法加载组织设置",
+      "workersTitle": "Workers",
+      "workersDescription": "已通过 Auto Agent Client 登录的本机设备（约 10 秒刷新）。",
+      "workersLoadError": "无法加载 Workers 列表",
+      "workersEmpty": "暂无已连接的设备。请让用户安装 Auto Agent Client，使用云地址登录；管理员在此批准设备。",
+      "workersDownloadClient": "下载客户端",
+      "workersTableNameHost": "名称 / 主机",
+      "workersTableUser": "用户",
+      "workersTableStatus": "状态",
+      "workersTableApproval": "授权",
+      "workersTableEnvironment": "环境",
+      "workersTableTags": "标签",
+      "workersTableRunning": "运行中",
+      "workersTableActions": "操作",
+      "workersOnline": "在线",
+      "workersOffline": "离线",
+      "workersApprove": "批准",
+      "workersReject": "拒绝",
+      "workersRevoke": "撤销",
+      "workersRejectConfirm": "拒绝 Worker「{{name}}」？",
+      "workersRevokeConfirm": "撤销 Worker「{{name}}」？",
+      "workersEnvReady": "就绪",
+      "workersEnvDegraded": "降级",
+      "workersEnvNotReady": "未就绪",
+      "workersEnvUnknown": "未知",
+      "workersApprovalPending": "待授权",
+      "workersApprovalApproved": "已授权",
+      "workersApprovalRejected": "已拒绝"
     }
   },
   "chat": {
@@ -382,7 +440,9 @@
       "runRejected": "运行被拒绝",
       "branchPruned": "分支已剪枝 · {{edge}}",
       "nodeSkipped": "已跳过 · {{node}}",
-      "mergeWaiting": "合并等待 · {{node}}（{{arrived}}/{{expected}}）"
+      "mergeWaiting": "合并等待 · {{node}}（{{arrived}}/{{expected}}）",
+      "desktopStep": "桌面 · {{node}} · {{action}}",
+      "visionStep": "视觉 · {{node}} · {{action}}"
     },
     "itemsCount": "{{count}} 条"
   },
@@ -480,6 +540,7 @@
     "insertOnSelectedEdge": "已选中连线，点击节点类型即可插入到两个步骤之间。",
     "group": {
       "browser": "浏览器",
+      "desktop": "桌面",
       "flow": "流程",
       "data": "数据"
     },
@@ -489,6 +550,10 @@
     "wait": "等待",
     "extract": "提取",
     "fuzzyAction": "模糊操作",
+    "desktopOpen": "打开应用",
+    "desktopAct": "桌面操作",
+    "desktopNavigate": "桌面导航",
+    "desktopExtract": "桌面提取",
     "set": "设置",
     "filter": "过滤",
     "merge": "合并",
@@ -733,6 +798,28 @@
     "loginPrompt": "需要在本地运行自动化？",
     "loginLink": "下载 Auto Agent Client"
   },
+  "webPlatform": {
+    "credentialsLocalHint": "凭证仅保存在桌面客户端或 Worker 本机，不会存入云端。请在本地配置凭证，再从此控制台运行工作流。",
+    "desktopOnly": {
+      "downloadCta": "下载桌面客户端",
+      "recordings": {
+        "title": "录制功能仅限桌面客户端",
+        "description": "请使用 Auto Agent 桌面客户端录制浏览器操作并生成工作流。"
+      },
+      "browserSessions": {
+        "title": "浏览器会话仅限桌面客户端",
+        "description": "实时浏览器会话在本地设备上运行，请在桌面客户端中管理。"
+      },
+      "browserProfiles": {
+        "title": "浏览器配置档仅限桌面客户端",
+        "description": "浏览器配置档保存在本机，请在桌面客户端中创建与管理。"
+      },
+      "credentials": {
+        "title": "凭证仅本地存储",
+        "description": "密钥保存在桌面客户端或 Worker 本机，不会存入云端。请打开桌面客户端添加或编辑凭证。"
+      }
+    }
+  },
   "livestream": {
     "title": "实时预览",
     "live": "直播中",
@@ -746,7 +833,10 @@
     "unavailableHint": "无法连接到实时流",
     "headed": "本地浏览器",
     "headedHint": "正在本地浏览器窗口中运行 — 为避免画面闪烁，已关闭实时预览",
-    "dimensions": "{{width}} × {{height}}"
+    "dimensions": "{{width}} × {{height}}",
+    "takeControl": "接管",
+    "giveBack": "交还",
+    "youAreDriving": "你正在操作此页面 — 智能体的点击和输入已暂停，直到你交还控制权。"
   },
   "tasks": {
     "title": "自主任务",
@@ -764,6 +854,8 @@
     "successCriteriaPlaceholder": "以数字形式返回产品价格",
     "requireConfirmationLabel": "需要确认",
     "requireConfirmationHint": "敏感操作前暂停等待人工审批",
+    "enableDesktopToolsLabel": "原生桌面工具",
+    "enableDesktopToolsHint": "启用 list_apps / open_app / desktop_click…（AX/UIA）。若同时填写起始 URL，浏览器工具仍可用。",
     "startTask": "开始任务",
     "starting": "启动中..."
   },
@@ -884,7 +976,18 @@
       "active": "进行中",
       "stopped": "已停止",
       "synthesized": "已合成"
-    }
+    },
+    "proposalsTitle": "Route Skill 提案",
+    "proposalsEmpty": "暂无待处理提案。生成工作流时会从录制中蒸馏 Route Skill。",
+    "proposalsEmptyStopped": "生成工作流以从录制中蒸馏 Route Skill。",
+    "proposalsPreview": "预览",
+    "proposalsHide": "收起",
+    "proposalsAdopt": "采纳",
+    "proposalsDismiss": "忽略",
+    "adoptMergeTitle": "合并到已有 Route Skill？",
+    "adoptMergeDescription": "该 URL 模式已有 Route Skill，提案内容将追加到现有 prompt 后面。",
+    "adoptMergeExisting": "已有技能：{{pattern}}",
+    "adoptMergeConfirm": "确认合并"
   },
   "elementPicker": {
     "title": "选择元素",
@@ -907,5 +1010,225 @@
     "errorPick": "点选失败",
     "errorTest": "测试 selector 失败",
     "errorSession": "创建会话失败"
+  },
+  "taskFailure": {
+    "generic": "任务未能完成。",
+    "reasons": {
+      "no_progress": "智能体在页面上停滞不前，无法继续完成任务。",
+      "time_budget_exhausted": "任务超时，未能完成目标。",
+      "step_budget_exhausted": "任务步数用尽，未能完成目标。",
+      "error": "浏览器操作出错，任务未能完成。",
+      "guardrail": "任务因安全或导航限制被阻止。",
+      "schema_validation_failed": "收集到的数据不符合要求的格式。",
+      "aborted": "任务已取消。"
+    }
+  },
+  "desktop": {
+    "nav": {
+      "home": "首页",
+      "runs": "运行历史",
+      "cloudSection": "云端",
+      "autonomousTask": "自主任务"
+    },
+    "signedIn": "已登录",
+    "signOut": "退出登录",
+    "splash": {
+      "starting": "正在启动 Auto Agent…",
+      "loadingSession": "正在加载会话…",
+      "startingDefault": "正在启动…"
+    },
+    "runtime": {
+      "startingProduction": "Auto Agent 仍在启动中，本地运行功能即将可用。",
+      "startingDev": "正在启动本地服务…（{{parts}} 尚未就绪）。两者都运行前部分功能可能不可用。",
+      "localCloud": "本地云端",
+      "localRuntime": "本地运行时",
+      "and": " 和 ",
+      "retry": "重试"
+    },
+    "home": {
+      "welcome": "欢迎回来，{{name}}",
+      "welcomeFallback": "用户",
+      "subtitle": "在本设备运行工作流，或从云端管理。",
+      "runsTitle": "运行",
+      "runsDescription": "查看云端运行历史，或在本设备执行工作流。",
+      "runsCta": "查看运行历史",
+      "workflowsTitle": "工作流",
+      "workflowsDescription": "创建与编辑云端工作流，拉取本地草稿或发布变更。",
+      "workflowsCta": "查看工作流",
+      "settingsTitle": "设置",
+      "settingsDescription": "个人资料、本地 LLM 密钥和设备就绪状态。",
+      "settingsCta": "打开设置",
+      "deviceTitle": "本设备",
+      "deviceDescription": "快速状态 — 详情见 设置 → 设备状态",
+      "online": "在线",
+      "offline": "离线",
+      "offlineHint": "请登录并确保组织已批准本设备（如需要）。",
+      "offlineHintNotSignedIn": "请登录以将本设备连接到您的组织。",
+      "offlineHintWorkerDisconnected": "Worker 已断开云端连接。来自 Web 的运行任务将等待本设备重新连接。",
+      "setupHint": "本地环境仍在配置中 — 浏览器组件可能正在下载。",
+      "viewDeviceStatus": "查看设备状态",
+      "agentComposerLabel": "消息",
+      "agentPlaceholder": "告诉助手要做什么…",
+      "agentSend": "发送",
+      "agentEmpty": "发送一条消息以开始。",
+      "agentQueued": "已排队：{{objective}}",
+      "agentError": "无法开始或发送对话。"
+    },
+    "workerCloud": {
+      "bannerTitle": "Worker 未连接到云端",
+      "bannerDescription": "从 Web 发起的运行会显示「等待 Worker」，直到本设备重新连接。请重启应用，或打开「设备状态」查看详情。",
+      "retry": "重新连接",
+      "retrying": "正在重新连接…",
+      "viewDeviceStatus": "设备状态"
+    },
+    "workflows": {
+      "title": "工作流",
+      "subtitle": "在云端创建与编辑工作流，也可拉取本地草稿离线修改后发布。",
+      "refresh": "刷新",
+      "cloudTitle": "云端工作流",
+      "cloudDescription": "打开即可编辑画布、对话、运行、凭证与触发器 — 与 Web 端相同。",
+      "empty": "未找到工作流。",
+      "localDraft": "本地草稿",
+      "cloudOnly": "仅云端",
+      "edit": "编辑",
+      "pullDraft": "拉取草稿",
+      "localTitle": "本地草稿",
+      "localDescription": "从云端拉取的离线副本 — 本地编辑后发布。",
+      "localEmpty": "尚无本地草稿。",
+      "queuedPublish": "排队发布中",
+      "publish": "发布",
+      "publishing": "发布中…",
+      "open": "打开",
+      "draftNotFound": "未找到草稿。",
+      "draftOfflineHint": "此草稿未关联云端工作流。请从云端工作流拉取以启用对话与发布。",
+      "localDraftsError": "本地草稿：{{error}}",
+      "cloudError": "云端工作流：{{error}}",
+      "sessionExpired": "云端登录会话已过期。Worker 仍在线，但查看工作流和从云端运行需要重新登录。",
+      "signInAgain": "重新登录",
+      "back": "工作流",
+      "untitled": "工作流"
+    },
+    "runs": {
+      "tabHistory": "运行历史",
+      "tabConsole": "本地运行",
+      "title": "运行控制台",
+      "subtitle": "在本设备上执行工作流。",
+      "startTitle": "开始运行",
+      "startDescription": "来自云端组织的工作流",
+      "selectWorkflow": "选择工作流",
+      "runLocally": "本地运行",
+      "abort": "中止",
+      "runLabel": "运行 {{id}}",
+      "waitingEvents": "等待事件…",
+      "recentTitle": "最近本地运行",
+      "recentEmpty": "尚无本地运行。",
+      "localReplayTitle": "本地运行 {{id}}",
+      "localReplaySubtitle": "本设备的事件日志与浏览器画面。",
+      "eventLog": "事件日志",
+      "noEvents": "无事件记录。",
+      "backToConsole": "返回本地运行"
+    },
+    "settings": {
+      "title": "设置",
+      "subtitle": "个人资料、本地 AI 密钥及本设备运行就绪状态。",
+      "deviceProfileTitle": "设备资料",
+      "deviceProfileDescription": "本机在组织设备列表中的显示方式。",
+      "displayName": "显示名称",
+      "tags": "标签（逗号分隔）",
+      "tagsPlaceholder": "default, pool-a",
+      "saved": "已保存",
+      "localLlmTitle": "本地 LLM",
+      "localLlmDescription": "加密存储于 ~/.auto-agent-worker/llm.json（密钥在 .key）。",
+      "provider": "提供商",
+      "providerGoogle": "Google / Gemini",
+      "providerOpenai": "OpenAI",
+      "geminiProvider": "Gemini 提供商",
+      "geminiAiStudio": "AI Studio（API 密钥）",
+      "geminiVertex": "Vertex AI",
+      "model": "模型",
+      "gcpProject": "GCP 项目",
+      "gcpLocation": "GCP 区域",
+      "googleApiKey": "Google API 密钥",
+      "googleApiKeyKeep": "留空以保留已保存的密钥",
+      "openaiModel": "模型",
+      "openaiApiKey": "OpenAI API 密钥",
+      "saveLlm": "保存 LLM 设置",
+      "computerUseTitle": "原生桌面 Computer Use",
+      "computerUseDescription": "授权原生应用的 AX/UIA + 截屏自动化。这与云端/管理设置里的 Playwright「computer use」坐标 fallback 开关不是同一套能力。",
+      "computerUseAvailable": "此设备可使用原生桌面 Computer Use。",
+      "computerUseUnavailable": "当前运行时不可用（缺少平台 extras 或非 macOS/Windows）。",
+      "computerUseLoading": "正在加载 Computer Use 设置…",
+      "alwaysAllowedApps": "始终允许的应用",
+      "noAlwaysAllowed": "尚未添加始终允许的应用。",
+      "allowAppPlaceholder": "Bundle id 或应用名（如 com.apple.TextEdit）",
+      "allowApp": "始终允许",
+      "revokeApp": "撤销",
+      "deviceStatusTitle": "设备状态",
+      "deviceStatusDescription": "浏览器环境、磁盘空间及与本机的云端连接。",
+      "viewDeviceStatus": "查看设备状态"
+    },
+    "device": {
+      "title": "设备状态",
+      "subtitle": "在本机运行工作流所需的连接与本地环境。",
+      "backHome": "返回首页",
+      "cloudLinkTitle": "云端连接",
+      "cloudLinkDescription": "本设备是否已连接到您的组织",
+      "online": "在线",
+      "offline": "离线",
+      "cloudConnectedHint": "本设备可接收并运行分配的工作流。",
+      "cloudDisconnectedHint": "请登录；若组织要求审批，请等待批准。",
+      "localSetupTitle": "本地环境",
+      "localSetupDescription": "本 Mac 上的浏览器与系统检查",
+      "checking": "正在检查本设备…"
+    },
+    "envStatus": {
+      "ready": "就绪",
+      "degraded": "受限",
+      "not_ready": "需要配置",
+      "unknown": "检查中…"
+    },
+    "checks": {
+      "playwright_installed": "浏览器自动化",
+      "chromium_binary": "Chromium 浏览器",
+      "disk_space": "磁盘空间",
+      "memory": "内存",
+      "cloud_reachable": "云端连接"
+    },
+    "login": {
+      "subtitleBakedIn": "登录以将本机连接到您的工作区。",
+      "subtitleDefault": "登录以将本设备连接到云端工作区。",
+      "oauthPendingTitle": "请在浏览器中完成登录…",
+      "oauthPendingHint": "在浏览器中完成 Google 登录后返回此处。",
+      "cancel": "取消",
+      "openBrowserAgain": "再次打开浏览器",
+      "cloudUrl": "云端 URL",
+      "cloudUrlPlaceholder": "https://your-cloud.example.com",
+      "loadingSignIn": "加载登录…",
+      "continueGoogle": "使用 Google 继续",
+      "or": "或",
+      "email": "邮箱",
+      "password": "密码",
+      "invalidCredentials": "邮箱或密码无效。",
+      "clientsDisabled": "此组织已禁用客户端。",
+      "signingIn": "登录中…",
+      "signInPassword": "使用密码登录",
+      "version": "版本 {{version}}"
+    },
+    "oauth": {
+      "noCode": "Google 登录失败，未返回授权码。",
+      "missingCloudUrl": "缺少云端 URL。请从登录页重新开始登录。",
+      "failedTitle": "登录失败",
+      "backToLogin": "返回登录",
+      "completing": "正在完成登录…",
+      "registering": "正在将此设备注册为 Worker。"
+    },
+    "pending": {
+      "rejectedTitle": "设备已被拒绝",
+      "rejectedDescription": "管理员已拒绝本设备。请联系组织管理员或退出后重试。",
+      "waitingTitle": "等待管理员批准",
+      "waitingDescription": "设备已注册，但需组织管理员在 设置 → Workers 中批准后才能运行工作流。",
+      "checkingInterval": "每 10 秒检查一次…",
+      "checkNow": "立即检查"
+    }
   }
 }

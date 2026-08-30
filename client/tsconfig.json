@@ -17,7 +17,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["../frontend/src/*"]
+      "@/*": ["../frontend/src/*"],
+      "@tauri-apps/api": ["./node_modules/@tauri-apps/api"],
+      "@tauri-apps/api/*": ["./node_modules/@tauri-apps/api/*"],
+      "@tauri-apps/plugin-opener": ["./node_modules/@tauri-apps/plugin-opener"],
+      "@tauri-apps/plugin-http": ["./node_modules/@tauri-apps/plugin-http"]
     }
   },
   "include": ["src", "../frontend/src/client", "../frontend/src/**/*.ts", "../frontend/src/**/*.tsx"]

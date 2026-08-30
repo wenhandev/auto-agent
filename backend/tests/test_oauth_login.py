@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -13,7 +14,7 @@ from app.db.models import OrgMembership, User, UserIdentity
 from app.db.session import engine, init_db
 from app.main import app
 from app.services.oauth.exchange_store import issue_exchange_code, reset_exchange_store_for_tests
-from app.services.oauth.state_cookie import pack_oauth_state_cookie
+from app.services.oauth.state_cookie import pack_oauth_state_cookie, unpack_oauth_state_cookie
 from app.services import orgs as org_svc
 from app.settings import settings
 
@@ -46,6 +47,15 @@ def test_oauth_providers_lists_google(client: TestClient) -> None:
     assert body["password_login_enabled"] is True
 
 
+def test_oauth_providers_allows_tauri_desktop_origin(client: TestClient) -> None:
+    resp = client.get(
+        "/api/auth/oauth/providers",
+        headers={"Origin": "tauri://localhost"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers.get("access-control-allow-origin") == "tauri://localhost"
+
+
 def test_oauth_start_redirects_to_google(client: TestClient) -> None:
     resp = client.get("/api/auth/oauth/google/start", follow_redirects=False)
     assert resp.status_code == 302
@@ -54,6 +64,76 @@ def test_oauth_start_redirects_to_google(client: TestClient) -> None:
     assert "client_id=google-client-id" in location
     assert "code_challenge=" in location
     assert resp.cookies.get("auto_agent_oauth_state")
+
+
+def test_oauth_start_desktop_sets_client_type(client: TestClient) -> None:
+    resp = client.get(
+        "/api/auth/oauth/google/start?client=desktop",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    cookie = resp.cookies.get("auto_agent_oauth_state")
+    assert cookie
+    stored = unpack_oauth_state_cookie(cookie, secret=settings.session_secret)
+    assert stored is not None
+    assert stored.get("client_type") == "desktop"
+
+
+def test_oauth_callback_desktop_redirects_to_localhost(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "desktop_client_base_url", "http://127.0.0.1:8745")
+    state = "desktop-state-token"
+    verifier = "desktop-verifier-token"
+    cookie = pack_oauth_state_cookie(
+        secret=settings.session_secret,
+        provider="google",
+        state=state,
+        code_verifier=verifier,
+        client_type="desktop",
+    )
+    email = f"desktop-oauth-{uuid.uuid4().hex[:8]}@wenhandev.com"
+    subject_id = f"google-subject-{uuid.uuid4().hex[:8]}"
+    with Session(engine) as session:
+        org = org_svc.ensure_bootstrap(session)
+        user = User(
+            email=email,
+            password_hash=org_svc.hash_password("secret"),
+            name="Desktop User",
+        )
+        session.add(user)
+        session.flush()
+        session.add(OrgMembership(user_id=user.id, org_id=org.id, role="owner"))
+        session.commit()
+
+    async def fake_exchange(**kwargs):
+        return {"access_token": "google-access-token"}
+
+    async def fake_profile(**kwargs):
+        from app.services.oauth.providers import OAuthProfile
+
+        return OAuthProfile(subject_id=subject_id, email=email)
+
+    with (
+        patch(
+            "app.routers.oauth_login.oauth_providers.exchange_code_for_tokens",
+            new=AsyncMock(side_effect=fake_exchange),
+        ),
+        patch(
+            "app.routers.oauth_login.oauth_providers.fetch_user_profile",
+            new=AsyncMock(side_effect=fake_profile),
+        ),
+    ):
+        resp = client.get(
+            "/api/auth/oauth/google/callback?code=abc&state=desktop-state-token",
+            cookies={"auto_agent_oauth_state": cookie},
+            follow_redirects=False,
+        )
+
+    assert resp.status_code == 302
+    assert resp.headers["location"].startswith(
+        "http://127.0.0.1:8745/login/oauth/callback?code="
+    )
 
 
 def test_oauth_exchange_issues_session(client: TestClient) -> None:

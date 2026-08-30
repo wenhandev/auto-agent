@@ -1,7 +1,40 @@
 import type { DesktopSession, WorkerApprovalStatus } from "./types";
+import {
+  desktopDefaultCloudUrl,
+  isLocalDevCloudUrl,
+} from "./cloudUrl";
 
 const SESSION_KEY = "auto-agent.desktop.session";
 const MACHINE_ID_KEY = "auto-agent.desktop.machine_id";
+
+const GENERIC_DISPLAY_NAMES = new Set(
+  ["localhost", "127.0.0.1", "my device", "desktop", "unknown"].map((s) =>
+    s.toLowerCase(),
+  ),
+);
+
+export function isGenericDisplayName(name: string | undefined | null): boolean {
+  const trimmed = name?.trim();
+  if (!trimmed) return true;
+  return GENERIC_DISPLAY_NAMES.has(trimmed.toLowerCase());
+}
+
+/** Normalize persisted session after upgrades (cloud URL, display name). */
+export function migrateSession(session: DesktopSession): DesktopSession {
+  const bakedCloud = desktopDefaultCloudUrl().replace(/\/$/, "");
+  let cloudUrl = session.cloudUrl.trim().replace(/\/$/, "");
+  if (
+    bakedCloud &&
+    isLocalDevCloudUrl(cloudUrl) &&
+    !isLocalDevCloudUrl(bakedCloud)
+  ) {
+    cloudUrl = bakedCloud;
+  }
+  const displayName = isGenericDisplayName(session.displayName)
+    ? session.displayName
+    : session.displayName.trim();
+  return { ...session, cloudUrl, displayName };
+}
 
 export function getOrCreateMachineId(): string {
   try {
@@ -25,10 +58,11 @@ export function loadSession(): DesktopSession | null {
     if (!raw) return null;
     const data = JSON.parse(raw) as DesktopSession;
     if (!data.cloudUrl || !data.workerSessionToken) return null;
-    if (!data.webSessionToken) {
-      return { ...data, webSessionToken: "" };
-    }
-    return data;
+    const session = migrateSession({
+      ...data,
+      webSessionToken: data.webSessionToken || "",
+    });
+    return session;
   } catch {
     return null;
   }

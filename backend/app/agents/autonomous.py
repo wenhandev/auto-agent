@@ -23,7 +23,13 @@ from app.agents.autonomous_errors import (
 )
 from app.agents.vision import VisionAgent, _validate_json_schema
 from app.nodes.dispatch import TRANSFORM_NODE_TYPES, run_transform
-from app.schemas_tasks import DEFAULT_ALLOWED_TOOLS, PlanItem, TaskResult, TaskSpec
+from app.schemas_tasks import (
+    DEFAULT_ALLOWED_TOOLS,
+    DESKTOP_TOOLS,
+    PlanItem,
+    TaskResult,
+    TaskSpec,
+)
 from app.services.perception import Observation, perceive, resolve_element, resolve_ref
 from app.tools import actions
 from app.tools.browser import get_page
@@ -90,6 +96,9 @@ class Memory:
     last_tool_error_category: Optional[str] = None
     consecutive_tool_errors: int = 0
     recent_tool_errors: list[str] = field(default_factory=list)
+    # Native desktop Computer Use context (observe/act against an app, not browser).
+    active_desktop_app: Optional[str] = None
+    desktop_lock_holder: Optional[str] = None
 
     def record_observation(self, observation: Observation) -> None:
         payload = observation.compact_payload()
@@ -232,6 +241,8 @@ def summarize_action_effect(
 def resolve_allowed_tools(spec: TaskSpec) -> frozenset[str]:
     if spec.allowed_tools is not None:
         return frozenset(spec.allowed_tools)
+    # Browser default. Desktop tools are opt-in via TaskSpec.allowed_tools
+    # (e.g. DEFAULT_DESKTOP_ALLOWED_TOOLS or an explicit mix).
     return frozenset(DEFAULT_ALLOWED_TOOLS)
 
 
@@ -277,6 +288,22 @@ def tool_schemas(allowed: frozenset[str]) -> list[dict[str, Any]]:
             "resource": "string",
             "operation": "string",
             "fields": "object?",
+        },
+        "list_apps": {},
+        "open_app": {"app": "string"},
+        "get_app_state": {"app": "string"},
+        "desktop_click": {
+            "app": "string",
+            "index": "integer?",
+            "x": "number?",
+            "y": "number?",
+        },
+        "desktop_type": {"app": "string", "text": "string", "index": "integer?"},
+        "desktop_key": {"app": "string", "key": "string"},
+        "desktop_scroll": {
+            "app": "string",
+            "direction": "up|down|left|right",
+            "amount": "integer?",
         },
     }
     for name in sorted(allowed):
@@ -395,6 +422,44 @@ class AutonomousAgent:
         self.vision_agent = vision_agent or VisionAgent()
         self.trajectory: list[TrajectoryStep] = []
 
+    async def _perceive_step(
+        self,
+        page: Any,
+        memory: Memory,
+        *,
+        allowed: frozenset[str],
+        ref_hint: str,
+    ) -> Observation:
+        """Browser perceive by default; desktop state when in native-app context."""
+        app = (memory.active_desktop_app or "").strip()
+        desktop_allowed = bool(app) and bool(DESKTOP_TOOLS & set(allowed))
+        if desktop_allowed:
+            try:
+                from app.services.desktop_computer_use import resolve_desktop_backend
+                from app.services.desktop_perception import observation_from_desktop_state
+
+                desktop = resolve_desktop_backend()
+                state = await desktop.get_app_state(app)
+                return observation_from_desktop_state(state)
+            except Exception as exc:
+                # Stay on desktop:// so guardrails/decide do not confuse browser
+                # element indices with desktop ones.
+                logger.warning(
+                    "desktop observe failed for %s (%s); returning empty desktop obs",
+                    app,
+                    exc,
+                )
+                return Observation(
+                    url=f"desktop://{app}",
+                    title=app,
+                    screenshot_bytes=b"",
+                    screenshot_ref="desktop-observe-failed",
+                    ax_snapshot={},
+                    elements=[],
+                    page_text_summary=f"desktop observe failed: {exc}",
+                )
+        return await perceive(page, ref_hint=ref_hint)
+
     async def run_task(
         self,
         spec: TaskSpec,
@@ -466,7 +531,12 @@ class AutonomousAgent:
                     "ts": _ts(),
                 })
 
-            observation = await perceive(page, ref_hint=f"task-{clock.steps_used}")
+            observation = await self._perceive_step(
+                page,
+                memory,
+                allowed=allowed,
+                ref_hint=f"task-{clock.steps_used}",
+            )
             memory.record_observation(observation)
             route_context = load_route_context(observation.url, allowed)
             effective_allowed = route_context.allowed_tools or allowed
@@ -856,8 +926,10 @@ class AutonomousAgent:
             previous_action_label = memory.last_action_label
             data_items_before = len(memory.extracted_items)
             memory.record_step(action_label, exec_result, observation.url)
-            after_observation = await perceive(
+            after_observation = await self._perceive_step(
                 page,
+                memory,
+                allowed=allowed,
                 ref_hint=f"task-{clock.steps_used}-effect",
             )
             action_effect = summarize_action_effect(
@@ -883,6 +955,8 @@ class AutonomousAgent:
                 "thought": decision.thought or action_label,
                 "action": tool_name,
                 "target_index": decision.tool.args.get("index"),
+                "url": observation.url,
+                "args": dict(decision.tool.args),
                 "screenshot_ref": observation.screenshot_ref,
                 "result": exec_result,
                 "action_effect": action_effect,
@@ -1034,11 +1108,28 @@ class AutonomousAgent:
         memory: Memory,
         page: Any,
     ) -> Any:
+        from app.services.artifact_context import get_run_id
+        from app.services.livestream import USER_HAS_CONTROL, user_has_control
+
+        if name in {
+            "navigate",
+            "click_element",
+            "type_text",
+            "select_option",
+            "scroll",
+            "drag_element",
+            "desktop_click",
+            "desktop_type",
+            "desktop_key",
+            "desktop_scroll",
+        } and user_has_control(get_run_id()):
+            return {"error": USER_HAS_CONTROL}
         if name == "navigate":
             url = str(args.get("url", ""))
             err = check_navigation(url, allowed_domains)
             if err:
                 return {"error": err}
+            memory.active_desktop_app = None
             return await actions.navigate(url)
 
         if name == "http_request":
@@ -1334,6 +1425,107 @@ class AutonomousAgent:
             ms = int(args.get("ms", 500))
             await asyncio.sleep(max(0, ms) / 1000)
             return {"waited_ms": ms}
+
+        if name in {
+            "list_apps",
+            "open_app",
+            "get_app_state",
+            "desktop_click",
+            "desktop_type",
+            "desktop_key",
+            "desktop_scroll",
+        }:
+            from app.services.desktop_computer_use import (
+                DesktopAppAuthorizationError,
+                DesktopAppBusyError,
+                DesktopAppForbiddenError,
+                DesktopComputerUseUnavailableError,
+                DesktopSessionUnavailableError,
+                hold_desktop_app,
+                require_interactive_session,
+                resolve_desktop_backend,
+            )
+            from app.services.desktop_perception import compact_desktop_observation
+
+            try:
+                desktop = resolve_desktop_backend()
+            except DesktopComputerUseUnavailableError as exc:
+                return {"error": str(exc)}
+            try:
+                if name == "list_apps":
+                    apps = await desktop.list_apps()
+                    return {
+                        "apps": [
+                            {
+                                "app_id": a.app_id,
+                                "name": a.name,
+                                "bundle_id": a.bundle_id,
+                                "frontmost": a.frontmost,
+                            }
+                            for a in apps
+                        ]
+                    }
+                app = str(args.get("app") or "")
+                require_interactive_session()
+                if memory.desktop_lock_holder is None:
+                    import uuid as _uuid
+
+                    memory.desktop_lock_holder = f"autonomous-{_uuid.uuid4().hex[:12]}"
+                holder = memory.desktop_lock_holder
+                with hold_desktop_app(app, holder):
+                    if name == "open_app":
+                        info = await desktop.open_app(app)
+                        memory.active_desktop_app = info.app_id or app
+                        return {
+                            "app_id": info.app_id,
+                            "name": info.name,
+                            "bundle_id": info.bundle_id,
+                        }
+                    if name == "get_app_state":
+                        state = await desktop.get_app_state(app)
+                        memory.active_desktop_app = (
+                            state.app.app_id or state.app.bundle_id or app
+                        )
+                        return compact_desktop_observation(state)
+                    memory.active_desktop_app = memory.active_desktop_app or app
+                    if name == "desktop_click":
+                        return await desktop.click(
+                            app,
+                            index=(
+                                int(args["index"])
+                                if args.get("index") is not None
+                                else None
+                            ),
+                            x=float(args["x"]) if args.get("x") is not None else None,
+                            y=float(args["y"]) if args.get("y") is not None else None,
+                        )
+                    if name == "desktop_type":
+                        return await desktop.type_text(
+                            app,
+                            str(args.get("text") or ""),
+                            index=(
+                                int(args["index"])
+                                if args.get("index") is not None
+                                else None
+                            ),
+                        )
+                    if name == "desktop_key":
+                        return await desktop.key(app, str(args.get("key") or ""))
+                    if name == "desktop_scroll":
+                        return await desktop.scroll(
+                            app,
+                            str(args.get("direction") or "down"),
+                            int(args.get("amount") or 3),
+                        )
+            except (
+                DesktopAppAuthorizationError,
+                DesktopAppForbiddenError,
+                DesktopAppBusyError,
+                DesktopSessionUnavailableError,
+            ) as exc:
+                return {"error": str(exc)}
+            except Exception as exc:
+                return {"error": str(exc)}
 
         return {"error": f"unknown tool {name!r}"}
 

@@ -20,9 +20,11 @@ import type {
   LlmConfigUpsert,
   LlmEffectiveOut,
   AntibotSettingsOut,
+  RuntimeSettingsOut,
   LastOutputShapesResponse,
   PendingApprovalOut,
   RecordingCreate,
+  RecordingDistillOut,
   RecordingGenerateOut,
   RecordingOut,
   RunArtifactOut,
@@ -37,6 +39,10 @@ import type {
   PickElementOut,
   PickerEnableOut,
   RouteSkillOut,
+  RouteSkillProposalAdoptOut,
+  RouteSkillProposalAdoptPreviewOut,
+  RouteSkillProposalOut,
+  RouteSkillBucketOut,
   AdminAuthSettingsOut,
   AdminDomainRuleOut,
   AdminOrgOut,
@@ -45,6 +51,7 @@ import type {
   LoginResponse,
   MeResponse,
   TaskCreate,
+  TaskDistillOut,
   TaskOut,
   TestSelectorOut,
   TriggerCreate,
@@ -119,7 +126,7 @@ async function parseBody(res: Response): Promise<unknown> {
   }
 }
 
-async function http<T>(
+export async function http<T>(
   method: string,
   path: string,
   body?: unknown,
@@ -249,7 +256,21 @@ export interface RecordingsApi {
   get(recordingId: string): Promise<RecordingOut>;
   stop(recordingId: string): Promise<RecordingOut>;
   generate(recordingId: string): Promise<RecordingGenerateOut>;
+  distill(
+    recordingId: string,
+    body?: { use_llm?: boolean },
+  ): Promise<RecordingDistillOut>;
   liveEvents(recordingId: string): Promise<Record<string, unknown>[]>;
+}
+
+export interface RouteSkillProposalsApi {
+  list(opts?: {
+    source_type?: string;
+    source_id?: string;
+  }): Promise<RouteSkillProposalOut[]>;
+  adoptPreview(proposalId: string): Promise<RouteSkillProposalAdoptPreviewOut>;
+  adopt(proposalId: string): Promise<RouteSkillProposalAdoptOut>;
+  dismiss(proposalId: string): Promise<RouteSkillProposalOut>;
 }
 
 export interface ApiKeysApi {
@@ -349,6 +370,7 @@ export interface LlmConfigApi {
 
 export interface SettingsApi {
   antibot(): Promise<AntibotSettingsOut>;
+  runtime(): Promise<RuntimeSettingsOut>;
 }
 
 export interface TriggersApi {
@@ -416,11 +438,17 @@ export interface BrowserSessionsApi {
 
 export interface RouteSkillsApi {
   list(): Promise<RouteSkillOut[]>;
+  buckets(): Promise<RouteSkillBucketOut[]>;
+  update(
+    skillId: string,
+    body: { enabled?: boolean; prompt?: string; priority?: number },
+  ): Promise<RouteSkillOut>;
 }
 
 export interface TasksApi {
   create(body: TaskCreate): Promise<TaskOut>;
   get(runId: string): Promise<TaskOut>;
+  distillRouteSkills(runId: string): Promise<TaskDistillOut>;
 }
 
 export interface AdminApi {
@@ -471,6 +499,7 @@ export interface ApiClient {
   browserProfiles: BrowserProfilesApi;
   browserSessions: BrowserSessionsApi;
   routeSkills: RouteSkillsApi;
+  routeSkillProposals: RouteSkillProposalsApi;
   recordings: RecordingsApi;
   tasks: TasksApi;
   integrations: IntegrationsApi;
@@ -664,6 +693,12 @@ export const apiClient: ApiClient = {
         "POST",
         `/api/recordings/${encodeURIComponent(recordingId)}/generate`,
       ),
+    distill: (recordingId, body) =>
+      http<RecordingDistillOut>(
+        "POST",
+        `/api/recordings/${encodeURIComponent(recordingId)}/distill`,
+        body ?? {},
+      ),
     liveEvents: (recordingId) =>
       http<Record<string, unknown>[]>(
         "GET",
@@ -751,11 +786,50 @@ export const apiClient: ApiClient = {
   },
   routeSkills: {
     list: () => http<RouteSkillOut[]>("GET", "/api/route-skills"),
+    buckets: () => http<RouteSkillBucketOut[]>("GET", "/api/route-skills/buckets"),
+    update: (skillId, body) =>
+      http<RouteSkillOut>(
+        "PATCH",
+        `/api/route-skills/${encodeURIComponent(skillId)}`,
+        body,
+      ),
+  },
+  routeSkillProposals: {
+    list: (opts) => {
+      const params = new URLSearchParams();
+      if (opts?.source_type) params.set("source_type", opts.source_type);
+      if (opts?.source_id) params.set("source_id", opts.source_id);
+      const qs = params.toString();
+      return http<RouteSkillProposalOut[]>(
+        "GET",
+        `/api/route-skill-proposals${qs ? `?${qs}` : ""}`,
+      );
+    },
+    adoptPreview: (proposalId) =>
+      http<RouteSkillProposalAdoptPreviewOut>(
+        "GET",
+        `/api/route-skill-proposals/${encodeURIComponent(proposalId)}/adopt-preview`,
+      ),
+    adopt: (proposalId) =>
+      http<RouteSkillProposalAdoptOut>(
+        "POST",
+        `/api/route-skill-proposals/${encodeURIComponent(proposalId)}/adopt`,
+      ),
+    dismiss: (proposalId) =>
+      http<RouteSkillProposalOut>(
+        "POST",
+        `/api/route-skill-proposals/${encodeURIComponent(proposalId)}/dismiss`,
+      ),
   },
   tasks: {
     create: (body) => http<TaskOut>("POST", "/api/tasks", body),
     get: (runId) =>
       http<TaskOut>("GET", `/api/tasks/${encodeURIComponent(runId)}`),
+    distillRouteSkills: (runId) =>
+      http<TaskDistillOut>(
+        "POST",
+        `/api/tasks/${encodeURIComponent(runId)}/distill-route-skills`,
+      ),
   },
   integrations: {
     list: () => http<IntegrationDescriptor[]>("GET", "/api/integrations"),
@@ -806,6 +880,7 @@ export const apiClient: ApiClient = {
   },
   settings: {
     antibot: () => http<AntibotSettingsOut>("GET", "/api/settings/antibot"),
+    runtime: () => http<RuntimeSettingsOut>("GET", "/api/settings/runtime"),
   },
   triggers: {
     list: (workflowId) =>

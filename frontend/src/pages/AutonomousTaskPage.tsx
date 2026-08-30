@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bot, Play } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { mergeDesktopAllowedTools } from "@/lib/desktopTools";
 
 export function AutonomousTaskPage() {
   const { t } = useTranslation();
@@ -28,7 +29,15 @@ export function AutonomousTaskPage() {
   const [maxSeconds, setMaxSeconds] = useState("300");
   const [successCriteria, setSuccessCriteria] = useState("");
   const [requireConfirmation, setRequireConfirmation] = useState(false);
+  const [enableDesktopTools, setEnableDesktopTools] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const runtimeQuery = useQuery({
+    queryKey: ["settings", "runtime"],
+    queryFn: () => apiClient.settings.runtime(),
+    staleTime: 60_000,
+  });
+  const workerOnly = runtimeQuery.data?.worker_only ?? false;
 
   const createMut = useMutation({
     mutationFn: (body: TaskCreate) => apiClient.tasks.create(body),
@@ -65,6 +74,12 @@ export function AutonomousTaskPage() {
     if (!Number.isNaN(seconds) && seconds > 0) body.max_seconds = seconds;
     if (successCriteria.trim()) {
       body.success_criteria = successCriteria.trim();
+    }
+    if (enableDesktopTools) {
+      body.allowed_tools = mergeDesktopAllowedTools(Boolean(startUrl.trim()));
+    }
+    if (workerOnly) {
+      body.execution_mode = "worker";
     }
     createMut.mutate(body);
   }
@@ -163,6 +178,22 @@ export function AutonomousTaskPage() {
                   id="requireConfirmation"
                   checked={requireConfirmation}
                   onCheckedChange={setRequireConfirmation}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                <div>
+                  <Label htmlFor="enableDesktopTools" className="cursor-pointer">
+                    {t("tasks.enableDesktopToolsLabel")}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t("tasks.enableDesktopToolsHint")}
+                  </p>
+                </div>
+                <Switch
+                  id="enableDesktopTools"
+                  checked={enableDesktopTools}
+                  onCheckedChange={setEnableDesktopTools}
                 />
               </div>
 

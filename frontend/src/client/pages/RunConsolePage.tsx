@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Play, Square } from "lucide-react";
 import { LiveStreamPanel } from "@/components/LiveStreamPanel";
 import { Button } from "@/components/ui/button";
@@ -23,18 +25,35 @@ import {
   DesktopApiError,
   fetchCloudWorkflows,
   listLocalRuns,
-  localRunEventsUrl,
-  localStreamWsUrl,
   startLocalRun,
 } from "../api";
+import { subscribeRunEvents } from "../runtimeBridge";
 import type { CloudWorkflowListItem, LocalRunMeta } from "../types";
 
 function eventLabel(ev: RunEvent): string {
+  if (!ev.event) return "";
   const node = ev.node_id ? ` [${ev.node_id}]` : "";
+  if (ev.event === "desktop_step" || ev.event === "vision_step") {
+    const action = String(
+      (ev as { action?: unknown }).action ??
+        (ev as { payload?: Record<string, unknown> }).payload?.action ??
+        "",
+    );
+    const app = String(
+      (ev as { app?: unknown }).app ??
+        (ev as { payload?: Record<string, unknown> }).payload?.app ??
+        "",
+    );
+    const bits = [ev.event + node];
+    if (app) bits.push(app);
+    if (action) bits.push(action);
+    return bits.join(" · ");
+  }
   return `${ev.event}${node}`;
 }
 
 export function RunConsolePage() {
+  const { t } = useTranslation();
   const [workflows, setWorkflows] = useState<CloudWorkflowListItem[]>([]);
   const [history, setHistory] = useState<LocalRunMeta[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
@@ -43,7 +62,7 @@ export function RunConsolePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
-  const sourceRef = useRef<EventSource | null>(null);
+  const unsubscribeEventsRef = useRef<(() => void | Promise<void>) | null>(null);
 
   const refreshMeta = useCallback(async () => {
     try {
@@ -72,15 +91,16 @@ export function RunConsolePage() {
 
   useEffect(() => {
     if (!activeRun || activeRun.status !== "running") {
-      sourceRef.current?.close();
-      sourceRef.current = null;
+      void unsubscribeEventsRef.current?.();
+      unsubscribeEventsRef.current = null;
       return;
     }
-    const source = new EventSource(localRunEventsUrl(activeRun.id));
-    sourceRef.current = source;
-    source.onmessage = (msg) => {
+
+    let cancelled = false;
+    void subscribeRunEvents(activeRun.id, (data) => {
+      if (cancelled) return;
       try {
-        const raw = JSON.parse(msg.data) as RunEvent;
+        const raw = JSON.parse(data) as RunEvent;
         setEvents((prev) => [...prev, raw]);
         const terminal = raw.event;
         if (
@@ -98,12 +118,18 @@ export function RunConsolePage() {
       } catch {
         // ignore malformed events
       }
-    };
-    source.onerror = () => {
-      source.close();
-    };
+    }).then((unsub) => {
+      if (cancelled) {
+        void unsub();
+        return;
+      }
+      unsubscribeEventsRef.current = unsub;
+    });
+
     return () => {
-      source.close();
+      cancelled = true;
+      void unsubscribeEventsRef.current?.();
+      unsubscribeEventsRef.current = null;
     };
   }, [activeRun?.id, activeRun?.status, refreshMeta]);
 
@@ -143,22 +169,24 @@ export function RunConsolePage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Run console</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t("desktop.runs.title")}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Execute workflows locally via the runtime sidecar.
+          {t("desktop.runs.subtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Start run</CardTitle>
-          <CardDescription>Workflows from your cloud organisation</CardDescription>
+          <CardTitle className="text-base">{t("desktop.runs.startTitle")}</CardTitle>
+          <CardDescription>{t("desktop.runs.startDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
           <div className="min-w-[220px] flex-1">
             <Select value={selectedWorkflowId} onValueChange={setSelectedWorkflowId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select workflow" />
+                <SelectValue placeholder={t("desktop.runs.selectWorkflow")} />
               </SelectTrigger>
               <SelectContent>
                 {workflows.map((wf) => (
@@ -169,14 +197,17 @@ export function RunConsolePage() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => void onRun()} disabled={loading || running || !selectedWorkflowId}>
+          <Button
+            onClick={() => void onRun()}
+            disabled={loading || running || !selectedWorkflowId}
+          >
             <Play className="mr-2 h-4 w-4" />
-            Run locally
+            {t("desktop.runs.runLocally")}
           </Button>
           {running && activeRun && (
             <Button variant="destructive" onClick={() => void onAbort()}>
               <Square className="mr-2 h-4 w-4" />
-              Abort
+              {t("desktop.runs.abort")}
             </Button>
           )}
         </CardContent>
@@ -193,9 +224,11 @@ export function RunConsolePage() {
           <Card className="flex min-h-0 flex-col overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-base">Run {activeRun.id}</CardTitle>
+                <CardTitle className="text-base">
+                  {t("desktop.runs.runLabel", { id: activeRun.id })}
+                </CardTitle>
                 <Badge variant={running ? "default" : "secondary"}>
-                  {activeRun.status}
+                  {t(`status.${activeRun.status}`, activeRun.status)}
                 </Badge>
               </div>
             </CardHeader>
@@ -205,14 +238,23 @@ export function RunConsolePage() {
                 className="scrollbar-thin h-full max-h-[420px] overflow-y-auto px-3 py-2 font-mono text-[11px]"
               >
                 {events.length === 0 ? (
-                  <p className="text-muted-foreground">Waiting for events…</p>
+                  <p className="text-muted-foreground">
+                    {t("desktop.runs.waitingEvents")}
+                  </p>
                 ) : (
-                  events.map((ev, i) => (
+                  events.map((ev, i) => {
+                    const label = eventLabel(ev);
+                    if (!label) return null;
+                    return (
                     <div key={i} className="mb-1 whitespace-pre-wrap break-all">
                       <span className="text-muted-foreground">{ev.ts} </span>
-                      {eventLabel(ev)}
+                      {label}
+                      {ev.error ? (
+                        <span className="text-destructive"> — {ev.error}</span>
+                      ) : null}
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </CardContent>
@@ -222,7 +264,7 @@ export function RunConsolePage() {
               <LiveStreamPanel
                 runId={activeRun.id}
                 active={running}
-                streamWsUrl={localStreamWsUrl(activeRun.id)}
+                runtimeRelay
               />
             </CardContent>
           </Card>
@@ -231,17 +273,26 @@ export function RunConsolePage() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Recent local runs</CardTitle>
+          <CardTitle className="text-base">{t("desktop.runs.recentTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No local runs yet.</p>
+            <p className="text-sm text-muted-foreground">
+              {t("desktop.runs.recentEmpty")}
+            </p>
           ) : (
             <ul className="space-y-2 text-sm">
               {history.slice(0, 10).map((run) => (
                 <li key={run.id} className="flex items-center justify-between gap-2">
-                  <span className="truncate font-mono text-xs">{run.id}</span>
-                  <Badge variant="outline">{run.status}</Badge>
+                  <Link
+                    to={`/runs/${run.id}`}
+                    className="truncate font-mono text-xs hover:underline"
+                  >
+                    {run.id}
+                  </Link>
+                  <Badge variant="outline">
+                    {t(`status.${run.status}`, run.status)}
+                  </Badge>
                 </li>
               ))}
             </ul>

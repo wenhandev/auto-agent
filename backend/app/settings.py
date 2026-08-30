@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     oauth_callback_base: str = "http://localhost:8000"
     # frontend origin for post-oauth redirect (no trailing slash)
     frontend_base_url: str = "http://localhost:5173"
+    # desktop client origin for OAuth callback when client=desktop (no trailing slash)
+    desktop_client_base_url: str = "http://127.0.0.1:8745"
     # run artifacts
     artifact_retention_days: int = 30
     max_artifact_bytes: int = 52_428_800  # 50 MiB
@@ -133,8 +135,23 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
+# Tauri 2 desktop client origins (production + dev). Safe to allow globally —
+# only installed desktop apps can use these schemes, not arbitrary websites.
+DESKTOP_CLIENT_CORS_ORIGINS = (
+    "http://localhost:1420",
+    "http://127.0.0.1:8745",
+    "http://tauri.localhost",
+    "https://tauri.localhost",
+    "tauri://localhost",
+)
+
+
 def cors_origin_list() -> list[str]:
-    return [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+    origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+    for origin in DESKTOP_CLIENT_CORS_ORIGINS:
+        if origin not in origins:
+            origins.append(origin)
+    return origins
 
 
 def apply_llm_env() -> None:

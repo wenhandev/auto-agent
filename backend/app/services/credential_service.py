@@ -32,12 +32,16 @@ def parse_cred_token(name_part: str) -> tuple[str | None, str]:
 
 
 def _linked_credential_ids(workflow_id: str, session: Session) -> set[str]:
-    rows = session.exec(
-        select(WorkflowCredential.credential_id).where(
-            WorkflowCredential.workflow_id == workflow_id
-        )
-    ).all()
-    return {r for r in rows}
+    try:
+        rows = session.exec(
+            select(WorkflowCredential.credential_id).where(
+                WorkflowCredential.workflow_id == workflow_id
+            )
+        ).all()
+        return {r for r in rows}
+    except Exception:
+        # Desktop worker bundles may not ship cloud SQLite tables.
+        return set()
 
 
 class CredentialResolver:

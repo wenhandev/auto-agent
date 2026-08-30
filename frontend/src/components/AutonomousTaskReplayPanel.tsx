@@ -1,8 +1,12 @@
 import { useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bot, ListChecks, Loader2, Target } from "lucide-react";
+import { Bot, ListChecks, Loader2, Sparkles, Target } from "lucide-react";
+import { apiClient } from "@/api-platform";
+import { RouteSkillProposalsPanel } from "@/components/RouteSkillProposalsPanel";
 import type { RunEventOut, RunOut, TaskResultOut } from "@/types-platform";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { statusBadgeVariant } from "@/lib/status";
 import { userFacingFailureMessage } from "@/lib/userFacingError";
 
@@ -12,11 +16,14 @@ interface PlanItem {
   status?: string;
 }
 
-interface VisionStep {
+interface AgentStep {
   stepIndex: number;
   thought: string;
   action: string;
   ts: string;
+  kind: "vision" | "desktop";
+  app?: string;
+  screenshotRef?: string;
 }
 
 function eventName(ev: RunEventOut): string {
@@ -33,15 +40,28 @@ function extractPlan(events: RunEventOut[]): PlanItem[] {
   return [];
 }
 
-function extractVisionSteps(events: RunEventOut[]): VisionStep[] {
+function extractAgentSteps(events: RunEventOut[]): AgentStep[] {
   return events
-    .filter((ev) => eventName(ev) === "vision_step")
-    .map((ev) => ({
-      stepIndex: Number(ev.payload?.step_index ?? 0),
-      thought: String(ev.payload?.thought ?? ""),
-      action: String(ev.payload?.action ?? ""),
-      ts: ev.ts,
-    }));
+    .filter((ev) => {
+      const name = eventName(ev);
+      return name === "vision_step" || name === "desktop_step";
+    })
+    .map((ev) => {
+      const name = eventName(ev);
+      return {
+        stepIndex: Number(ev.payload?.step_index ?? 0),
+        thought: String(ev.payload?.thought ?? ""),
+        action: String(ev.payload?.action ?? ""),
+        ts: ev.ts,
+        kind: name === "desktop_step" ? ("desktop" as const) : ("vision" as const),
+        app:
+          typeof ev.payload?.app === "string" ? ev.payload.app : undefined,
+        screenshotRef:
+          typeof ev.payload?.screenshot_ref === "string"
+            ? ev.payload.screenshot_ref
+            : undefined,
+      };
+    });
 }
 
 function extractTaskResult(
@@ -67,12 +87,25 @@ interface Props {
 
 export function AutonomousTaskReplayPanel({ run, events }: Props) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const plan = useMemo(() => extractPlan(events), [events]);
-  const steps = useMemo(() => extractVisionSteps(events), [events]);
+  const steps = useMemo(() => extractAgentSteps(events), [events]);
   const result = useMemo(
     () => extractTaskResult(run, events),
     [run, events],
   );
+
+  const canDistill =
+    run.status === "completed" && result?.success === true && steps.length > 0;
+
+  const distillMut = useMutation({
+    mutationFn: () => apiClient.tasks.distillRouteSkills(run.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["route-skill-proposals", "task_run", run.id],
+      });
+    },
+  });
 
   const isRunning = run.status === "running" || run.status === "queued";
   const isFailed = run.status === "failed" || run.status === "aborted";
@@ -199,13 +232,25 @@ export function AutonomousTaskReplayPanel({ run, events }: Props) {
             <ol className="space-y-3">
               {steps.map((step) => (
                 <li
-                  key={`${step.stepIndex}-${step.ts}`}
+                  key={`${step.kind}-${step.stepIndex}-${step.ts}`}
                   className="rounded-md border bg-muted/30 px-3 py-2"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <Badge variant="secondary" className="font-mono text-[10px]">
-                      #{step.stepIndex + 1} {step.action}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="secondary" className="font-mono text-[10px]">
+                        #{step.stepIndex + 1} {step.action}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {step.kind === "desktop"
+                          ? t("pages.autonomousReplay.desktopStep")
+                          : t("pages.autonomousReplay.visionStep")}
+                      </Badge>
+                      {step.app ? (
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {step.app}
+                        </span>
+                      ) : null}
+                    </div>
                     <span className="text-[10px] text-muted-foreground">
                       {new Date(step.ts).toLocaleTimeString()}
                     </span>
@@ -213,11 +258,42 @@ export function AutonomousTaskReplayPanel({ run, events }: Props) {
                   {step.thought && (
                     <p className="mt-1 text-sm text-foreground">{step.thought}</p>
                   )}
+                  {step.screenshotRef ? (
+                    <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                      {step.screenshotRef}
+                    </p>
+                  ) : null}
                 </li>
               ))}
             </ol>
           )}
         </section>
+
+        {canDistill && (
+          <section className="rounded-lg border bg-card p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("pages.autonomousReplay.routeSkillsTitle")}
+              </div>
+              <Button
+                size="sm"
+                onClick={() => distillMut.mutate()}
+                disabled={distillMut.isPending}
+              >
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                {distillMut.isPending
+                  ? t("pages.autonomousReplay.distilling")
+                  : t("pages.autonomousReplay.distillRouteSkills")}
+              </Button>
+            </div>
+            <RouteSkillProposalsPanel
+              sourceType="task_run"
+              sourceId={run.id}
+              compact
+              emptyHint={t("pages.autonomousReplay.proposalsEmpty")}
+            />
+          </section>
+        )}
       </div>
     </div>
   );

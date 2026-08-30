@@ -7,15 +7,21 @@ from sqlmodel import Session, select
 
 from app.auth.authorization import require_min_role
 from app.auth.context import AuthContext, get_org_context
-from app.auth.session import check_login_rate_limit
+from app.auth.session import check_login_rate_limit, verify_session_token
 from app.auth.worker_auth import WorkerAuth, require_worker_session
 from app.db.models import OrgMembership, Organization, User
 from app.db.session import get_session
-from app.schemas_api import WorkerLoginRequest, WorkerLoginResponse, WorkerOut
+from app.schemas_api import (
+    WorkerLoginRequest,
+    WorkerLoginResponse,
+    WorkerOAuthLoginRequest,
+    WorkerOut,
+)
 from app.services import orgs as org_svc
 from app.services import worker_hub
 from app.services import worker_sessions as worker_session_svc
 from app.services import workers as worker_svc
+from app.services.oauth.exchange_store import consume_exchange_code
 from app.services.orgs import verify_password
 
 
@@ -37,25 +43,17 @@ def _resolve_org_for_user(session: Session, user: User) -> tuple[str, str]:
     return membership.org_id, membership.role
 
 
-@router.post("/login", response_model=WorkerLoginResponse)
-def worker_login(
-    body: WorkerLoginRequest,
-    request: Request,
-    session: Session = Depends(get_session),
+def _complete_worker_login(
+    session: Session,
+    *,
+    user: User,
+    machine_id: str,
+    display_name: str | None,
+    hostname: str | None,
+    tags: list[str] | None,
+    agent_version: str | None,
+    environment: dict | None,
 ) -> WorkerLoginResponse:
-    client_ip = request.client.host if request.client else "unknown"
-    check_login_rate_limit(f"worker-login:{client_ip}:{body.email.lower()}")
-
-    user = session.exec(
-        select(User).where(User.email == body.email.strip().lower())
-    ).first()
-    if user is None or not user.password_hash:
-        raise HTTPException(status_code=401, detail="invalid credentials")
-    if user.disabled_at is not None:
-        raise HTTPException(status_code=401, detail="invalid credentials")
-    if not verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="invalid credentials")
-
     org_id, _role = _resolve_org_for_user(session, user)
     org = session.get(Organization, org_id)
     if org is None:
@@ -72,12 +70,12 @@ def worker_login(
         session,
         org_id=org_id,
         user_id=user.id,
-        machine_id=body.machine_id.strip(),
-        display_name=body.display_name,
-        hostname=body.hostname,
-        tags=body.tags,
-        agent_version=body.agent_version,
-        environment=body.environment,
+        machine_id=machine_id.strip(),
+        display_name=display_name,
+        hostname=hostname,
+        tags=tags,
+        agent_version=agent_version,
+        environment=environment,
     )
     worker = worker_svc.apply_login_approval(session, worker, org, is_new=is_new)
     worker_session, token = worker_session_svc.create_worker_session(
@@ -90,6 +88,93 @@ def worker_login(
         expires_at=worker_session.expires_at,
         approval_status=worker_svc.effective_approval_status(worker),
         desktop_client_policy=policy,
+    )
+
+
+def _user_from_session_token(session: Session, token: str) -> User:
+    user_id = verify_session_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="invalid session")
+    user = session.get(User, user_id)
+    if user is None or user.disabled_at is not None:
+        raise HTTPException(status_code=401, detail="invalid session")
+    return user
+
+
+def _user_from_oauth_exchange(session: Session, code: str) -> User:
+    user_id = consume_exchange_code(code)
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="invalid or expired exchange code")
+    user = session.get(User, user_id)
+    if user is None or user.disabled_at is not None:
+        raise HTTPException(status_code=400, detail="invalid or expired exchange code")
+    return user
+
+
+@router.post("/login", response_model=WorkerLoginResponse)
+def worker_login(
+    body: WorkerLoginRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+) -> WorkerLoginResponse:
+    if body.session_token:
+        user = _user_from_session_token(session, body.session_token)
+    elif body.email and body.password:
+        client_ip = request.client.host if request.client else "unknown"
+        check_login_rate_limit(f"worker-login:{client_ip}:{body.email.lower()}")
+
+        user = session.exec(
+            select(User).where(User.email == body.email.strip().lower())
+        ).first()
+        if user is None or not user.password_hash:
+            raise HTTPException(status_code=401, detail="invalid credentials")
+        if user.disabled_at is not None:
+            raise HTTPException(status_code=401, detail="invalid credentials")
+        if not verify_password(body.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="invalid credentials")
+    else:
+        raise HTTPException(status_code=400, detail="email/password or session_token required")
+
+    return _complete_worker_login(
+        session,
+        user=user,
+        machine_id=body.machine_id,
+        display_name=body.display_name,
+        hostname=body.hostname,
+        tags=body.tags,
+        agent_version=body.agent_version,
+        environment=body.environment,
+    )
+
+
+@router.post("/login/oauth", response_model=WorkerLoginResponse)
+def worker_login_oauth(
+    body: WorkerOAuthLoginRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+) -> WorkerLoginResponse:
+    client_ip = request.client.host if request.client else "unknown"
+    check_login_rate_limit(f"worker-oauth-login:{client_ip}")
+
+    if body.session_token:
+        user = _user_from_session_token(session, body.session_token)
+    elif body.oauth_exchange_code:
+        user = _user_from_oauth_exchange(session, body.oauth_exchange_code)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="session_token or oauth_exchange_code required",
+        )
+
+    return _complete_worker_login(
+        session,
+        user=user,
+        machine_id=body.machine_id,
+        display_name=body.display_name,
+        hostname=body.hostname,
+        tags=body.tags,
+        agent_version=body.agent_version,
+        environment=body.environment,
     )
 
 

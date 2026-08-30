@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "@/api-platform";
 import type { DesktopClientPolicy } from "@/types-platform";
 import { WorkersPanel } from "@/components/WorkersPanel";
@@ -20,35 +21,36 @@ import {
 
 const QK_ORG_SETTINGS = ["orgs", "settings"] as const;
 
-const DESKTOP_POLICY_OPTIONS: {
-  value: DesktopClientPolicy;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: "approval_required",
-    label: "需要管理员批准",
-    description: "新设备登录后需管理员批准才能执行任务（推荐）。",
-  },
-  {
-    value: "open",
-    label: "自动批准",
-    description: "设备首次登录后自动批准（开发/小团队）。",
-  },
-  {
-    value: "disabled",
-    label: "禁用客户端",
-    description: "禁止客户端登录与连接。",
-  },
-];
-
 type SettingsWorkersTabProps = {
   orgId: string | undefined;
   canManageOrg: boolean;
 };
 
 export function SettingsWorkersTab({ orgId, canManageOrg }: SettingsWorkersTabProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
+
+  const policyOptions: {
+    value: DesktopClientPolicy;
+    labelKey: string;
+    descriptionKey: string;
+  }[] = [
+    {
+      value: "approval_required",
+      labelKey: "pages.settings.workersPolicyApprovalRequired",
+      descriptionKey: "pages.settings.workersPolicyApprovalRequiredDesc",
+    },
+    {
+      value: "open",
+      labelKey: "pages.settings.workersPolicyOpen",
+      descriptionKey: "pages.settings.workersPolicyOpenDesc",
+    },
+    {
+      value: "disabled",
+      labelKey: "pages.settings.workersPolicyDisabled",
+      descriptionKey: "pages.settings.workersPolicyDisabledDesc",
+    },
+  ];
 
   const orgSettingsQuery = useQuery({
     queryKey: [...QK_ORG_SETTINGS, orgId],
@@ -67,26 +69,35 @@ export function SettingsWorkersTab({ orgId, canManageOrg }: SettingsWorkersTabPr
     },
   });
 
+  const activePolicy = orgSettingsQuery.data?.desktop_client_policy;
+  const activeOption = policyOptions.find((o) => o.value === activePolicy);
+
   return (
     <div className="space-y-6">
       {canManageOrg && orgId && (
         <Card className="border-0 bg-card shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">客户端策略</CardTitle>
+            <CardTitle className="text-base">
+              {t("pages.settings.workersPolicyTitle")}
+            </CardTitle>
             <CardDescription>
-              控制 Auto Agent Client 的注册与执行权限（仅管理员）。
+              {t("pages.settings.workersPolicyDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {orgSettingsQuery.isLoading && (
-              <p className="text-sm text-muted-foreground">加载中…</p>
+              <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
             )}
             {orgSettingsQuery.error && (
-              <p className="text-sm text-destructive">无法加载组织设置</p>
+              <p className="text-sm text-destructive">
+                {t("pages.settings.workersPolicyLoadError")}
+              </p>
             )}
             {orgSettingsQuery.data && (
               <div className="grid max-w-md gap-2">
-                <Label htmlFor="desktop-client-policy">策略</Label>
+                <Label htmlFor="desktop-client-policy">
+                  {t("pages.settings.workersPolicyLabel")}
+                </Label>
                 <Select
                   value={orgSettingsQuery.data.desktop_client_policy}
                   onValueChange={(v) =>
@@ -98,20 +109,18 @@ export function SettingsWorkersTab({ orgId, canManageOrg }: SettingsWorkersTabPr
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DESKTOP_POLICY_OPTIONS.map((opt) => (
+                    {policyOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  {
-                    DESKTOP_POLICY_OPTIONS.find(
-                      (o) => o.value === orgSettingsQuery.data!.desktop_client_policy,
-                    )?.description
-                  }
-                </p>
+                {activeOption && (
+                  <p className="text-xs text-muted-foreground">
+                    {t(activeOption.descriptionKey)}
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

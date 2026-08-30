@@ -11,7 +11,8 @@ from sqlmodel import Session, select
 
 from app.db.models import RouteSkill
 from app.db.session import get_session
-from app.schemas_api import RouteSkillCreate, RouteSkillOut, RouteSkillUpdate
+from app.schemas_api import RouteSkillBucketOut, RouteSkillCreate, RouteSkillOut, RouteSkillUpdate
+from app.services.route_skill_buckets import list_skill_buckets
 
 
 router = APIRouter(prefix="/api/route-skills", tags=["route-skills"])
@@ -39,6 +40,25 @@ def _to_out(row: RouteSkill) -> RouteSkillOut:
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+@router.get("/buckets", response_model=list[RouteSkillBucketOut])
+def list_route_skill_buckets(
+    session: Session = Depends(get_session),
+) -> list[RouteSkillBucketOut]:
+    rows = list_skill_buckets(session)
+    return [
+        RouteSkillBucketOut(
+            domain=row.domain,
+            url_pattern=row.url_pattern,
+            capability=row.capability,
+            route_skill_id=row.route_skill_id,
+            enabled=row.enabled,
+            pending_proposals=row.pending_proposals,
+            prompt_preview=row.prompt_preview,
+        )
+        for row in rows
+    ]
 
 
 @router.get("", response_model=list[RouteSkillOut])

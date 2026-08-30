@@ -8,7 +8,7 @@ from app.tools.browser import get_page
 
 async def navigate(url: str) -> dict:
     page = await get_page()
-    await page.goto(url)
+    await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
     return {"url": page.url, "title": await page.title()}
 
 

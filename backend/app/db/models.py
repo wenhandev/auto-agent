@@ -632,4 +632,56 @@ class Recording(SQLModel, table=True):
     stopped_at: Optional[datetime] = None
 
 
-__all__ += ["Recording"]
+class RouteSkillProposal(SQLModel, table=True):
+    __tablename__ = "route_skill_proposal"
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    source_type: str = Field(index=True, nullable=False)
+    source_id: str = Field(index=True, nullable=False)
+    org_id: Optional[str] = Field(default=None, foreign_key="organization.id", index=True)
+    domain: str = Field(index=True, nullable=False)
+    capability: str = Field(index=True, nullable=False)
+    url_pattern: str = Field(index=True, nullable=False)
+    prompt: str = Field(nullable=False)
+    evidence_json: str = Field(default="[]", nullable=False)
+    status: str = Field(default="pending", index=True, nullable=False)
+    adopted_route_skill_id: Optional[str] = Field(
+        default=None, foreign_key="route_skill.id", index=True
+    )
+    created_at: datetime = Field(default_factory=_utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=_utcnow, nullable=False)
+
+
+class Conversation(SQLModel, table=True):
+    __tablename__ = "conversation"
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    owner_id: str = Field(index=True)
+    org_id: Optional[str] = Field(default=None, index=True)
+    title: str = Field(default="", nullable=False)
+    closed_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=_utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=_utcnow, nullable=False)
+    active_turn_id: Optional[str] = None
+
+
+class ConversationEventRow(SQLModel, table=True):
+    __tablename__ = "conversation_event"
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    conversation_id: str = Field(foreign_key="conversation.id", index=True)
+    seq: int = Field(nullable=False)
+    kind: str = Field(nullable=False)
+    payload_json: str = Field(nullable=False)
+    client_id: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=_utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "seq", name="uq_conversation_event_conv_seq"),
+        UniqueConstraint(
+            "conversation_id", "client_id", name="uq_conversation_event_conv_client"
+        ),
+    )
+
+
+__all__ += ["Recording", "RouteSkillProposal", "Conversation", "ConversationEventRow"]

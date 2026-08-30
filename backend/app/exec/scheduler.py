@@ -49,6 +49,13 @@ _BROWSER_NODE_TYPES = frozenset({
     "login",
 })
 
+_DESKTOP_NODE_TYPES = frozenset({
+    "desktop_open",
+    "desktop_act",
+    "desktop_navigate",
+    "desktop_extract",
+})
+
 
 async def _browser_screenshot_extra(node_id: str, phase: str) -> dict[str, Any]:
     from app.services.browser_visual import skip_optional_page_screenshots

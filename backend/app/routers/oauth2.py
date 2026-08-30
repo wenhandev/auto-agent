@@ -19,6 +19,7 @@ from app.db.models import Credential
 from app.db.session import get_session
 from app.integrations.credential_types import get_credential_type
 from app.integrations.registry import get_descriptor
+from app.services.control_plane_policy import require_edge_execution
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ def oauth_connect(
     session: Session = Depends(get_session),
 ):
     """Start OAuth2 authorization-code flow. Redirects to provider authorize URL."""
+    require_edge_execution("credentials")
     try:
         desc = get_descriptor(app)
     except KeyError as exc:
@@ -190,6 +192,7 @@ async def oauth_callback(
     state: str = Query(...),
     session: Session = Depends(get_session),
 ):
+    require_edge_execution("credentials")
     try:
         payload = _verify_state(state)
     except HTTPException as exc:

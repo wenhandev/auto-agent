@@ -23,6 +23,7 @@ def pack_oauth_state_cookie(
     provider: str,
     state: str,
     code_verifier: str,
+    client_type: str | None = None,
 ) -> str:
     payload: dict[str, Any] = {
         "p": provider,
@@ -30,6 +31,8 @@ def pack_oauth_state_cookie(
         "v": code_verifier,
         "exp": int(time.time()) + OAUTH_STATE_TTL_SECONDS,
     }
+    if client_type:
+        payload["c"] = client_type
     payload_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode())
     return f"{payload_b64}.{_sign(payload_b64, secret)}"
 
@@ -55,4 +58,8 @@ def unpack_oauth_state_cookie(value: str, *, secret: str) -> dict[str, str] | No
     verifier = payload.get("v")
     if not all(isinstance(x, str) and x for x in (provider, state, verifier)):
         return None
-    return {"provider": provider, "state": state, "code_verifier": verifier}
+    out = {"provider": provider, "state": state, "code_verifier": verifier}
+    client_type = payload.get("c")
+    if isinstance(client_type, str) and client_type:
+        out["client_type"] = client_type
+    return out

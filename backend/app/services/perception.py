@@ -102,6 +102,7 @@ class Observation:
         payload = {
             "url": self.url,
             "title": self.title,
+            "tree": control_tree(self.elements),
             "elements": [_el_dict(el) for el in self.elements[:_ELEMENT_LIST_LIMIT]],
             "page_text_summary": self.page_text_summary,
             "screenshot_ref": self.screenshot_ref,
@@ -130,6 +131,51 @@ def make_element_ref(role: str, name: str, index: int) -> str:
     raw = f"{index}:{role}:{name}".encode("utf-8", errors="ignore")
     digest = hashlib.sha1(raw).hexdigest()[:10]
     return f"ref_{digest}"
+
+
+def control_tree(elements: list[IndexedElement]) -> str:
+    """Numbered list the model should click: ``0. [button] Add to cart``."""
+    lines: list[str] = []
+    for el in elements[:_ELEMENT_LIST_LIMIT]:
+        text = re.sub(r"\s+", " ", el.name or "").strip() or "(no name)"
+        kind = (el.role or "control").strip()
+        lines.append(f"{el.index}. [{kind}] {text}")
+    return "\n".join(lines)
+
+
+# Painted onto the page for one screenshot, then stripped (set-of-marks).
+_PAINT_MARKS_JS = """
+(marks) => {
+  document.querySelectorAll('[data-aa-mark]').forEach((el) => el.remove());
+  for (const m of marks || []) {
+    const b = m.box || {};
+    if (!b.w || !b.h) continue;
+    const badge = document.createElement('div');
+    badge.setAttribute('data-aa-mark', '1');
+    badge.textContent = String(m.n);
+    badge.style.cssText = [
+      'position:fixed',
+      'left:' + Math.max(0, b.x) + 'px',
+      'top:' + Math.max(0, b.y) + 'px',
+      'z-index:2147483647',
+      'pointer-events:none',
+      'min-width:16px',
+      'height:16px',
+      'padding:0 4px',
+      'border-radius:3px',
+      'background:#ff5a1f',
+      'color:#fff',
+      'font:700 11px/16px ui-sans-serif,system-ui,sans-serif',
+      'box-shadow:0 0 0 1px #fff',
+    ].join(';');
+    document.documentElement.appendChild(badge);
+  }
+}
+"""
+
+_CLEAR_MARKS_JS = (
+    "() => { document.querySelectorAll('[data-aa-mark]').forEach((el) => el.remove()); }"
+)
 
 
 def elements_from_ax_snapshot(ax_snapshot: dict[str, Any]) -> list[IndexedElement]:
@@ -317,6 +363,51 @@ def _store_screenshot(data: bytes, ref_hint: str = "") -> str:
     return str(path)
 
 
+async def _marks_for_elements(page: Page, elements: list[IndexedElement]) -> list[dict[str, Any]]:
+    if not hasattr(page, "get_by_role"):
+        return []
+    marks: list[dict[str, Any]] = []
+    for el in elements[:_ELEMENT_LIST_LIMIT]:
+        locator = await _locator_for_signature(page, el.signature)
+        if locator is None:
+            continue
+        try:
+            box = await locator.bounding_box()
+        except Exception:
+            continue
+        if not box:
+            continue
+        marks.append(
+            {
+                "n": el.index,
+                "box": {
+                    "x": box.get("x") or 0,
+                    "y": box.get("y") or 0,
+                    "w": box.get("width") or 0,
+                    "h": box.get("height") or 0,
+                },
+            }
+        )
+    return marks
+
+
+async def _paint_set_of_marks(page: Page, elements: list[IndexedElement]) -> None:
+    marks = await _marks_for_elements(page, elements)
+    if not marks:
+        return
+    try:
+        await page.evaluate(_PAINT_MARKS_JS, marks)
+    except Exception:
+        logger.debug("perception: set-of-marks paint failed", exc_info=True)
+
+
+async def _clear_set_of_marks(page: Page) -> None:
+    try:
+        await page.evaluate(_CLEAR_MARKS_JS)
+    except Exception:
+        pass
+
+
 async def perceive(page: Page, *, ref_hint: str = "") -> Observation:
     """Capture screenshot + a11y tree and build the indexed element map."""
     url = page.url
@@ -325,11 +416,9 @@ async def perceive(page: Page, *, ref_hint: str = "") -> Observation:
     except Exception:
         title = ""
 
-    screenshot_bytes = await _grab_screenshot(page)
     ax_snapshot = await _accessibility_snapshot(page)
     elements = elements_from_ax_snapshot(ax_snapshot)
     page_text_summary = await _page_text_summary(page)
-    screenshot_ref = _store_screenshot(screenshot_bytes, ref_hint=ref_hint)
 
     # Inject actual DOM values for form fields so the fingerprint reflects typed text.
     # aria_snapshot doesn't always capture textbox/combobox values reliably.
@@ -404,6 +493,9 @@ async def perceive(page: Page, *, ref_hint: str = "") -> Observation:
                 },
             )
         )
+    await _paint_set_of_marks(page, elements)
+    screenshot_bytes = await _grab_screenshot(page)
+    await _clear_set_of_marks(page)
     screenshot_ref = _store_screenshot(screenshot_bytes, ref_hint=ref_hint)
 
     captcha: Optional[CaptchaInfo] = None
@@ -529,11 +621,8 @@ async def resolve_element(
 
 
 def format_elements_for_prompt(observation: Observation) -> str:
-    lines: list[str] = []
-    for el in observation.elements[:_ELEMENT_LIST_LIMIT]:
-        label = el.name or "(no name)"
-        lines.append(f"[{el.index}] {el.role} \"{label}\"")
-    return "\n".join(lines) if lines else "(no interactive elements)"
+    tree = control_tree(observation.elements)
+    return tree if tree else "(no interactive elements)"
 
 
 def serialize_ax_snapshot(snapshot: dict[str, Any]) -> str:
@@ -548,6 +637,7 @@ __all__ = [
     "ElementSignature",
     "IndexedElement",
     "Observation",
+    "control_tree",
     "elements_from_ax_snapshot",
     "format_elements_for_prompt",
     "locator_for_signature",

@@ -42,12 +42,12 @@ def _clear_publish_queue(tmp_path, monkeypatch):
 
 @contextmanager
 def daemon_client(state: DaemonState):
-    with patch("app.worker.daemon._poll_worker_status", _idle_forever), patch(
-        "app.worker.daemon._worker_ws_loop", _idle_forever
-    ), patch("app.worker.daemon._run_preflight", return_value=None), patch(
-        "app.worker.daemon._flush_publish_queue", new=AsyncMock()
-    ), patch("app.worker.daemon._restart_worker_ws", new=AsyncMock()), patch(
-        "app.worker.daemon.cred_svc.load_credentials", return_value=FAKE_CREDS
+    with patch("app.worker.desktop_runtime.poll_worker_status", _idle_forever), patch(
+        "app.worker.desktop_runtime.worker_ws_loop", _idle_forever
+    ), patch("app.worker.desktop_runtime.bootstrap_environment", new=AsyncMock()), patch(
+        "app.worker.desktop_runtime.flush_publish_queue", new=AsyncMock()
+    ), patch("app.worker.desktop_runtime.restart_worker_ws", new=AsyncMock()), patch(
+        "app.worker.credentials.load_credentials", return_value=FAKE_CREDS
     ):
         app = create_daemon_app(state)
         with TestClient(app) as client:
@@ -62,7 +62,7 @@ def test_pending_worker_cannot_publish() -> None:
         worker_id="wk_test",
     )
     with daemon_client(state) as client, patch(
-        "app.worker.daemon.draft_svc.get_draft"
+        "app.worker.drafts.get_draft"
     ) as get_draft:
         get_draft.return_value = {
             "local_id": "draft_1",
@@ -87,10 +87,10 @@ def test_approval_unlocks_publish(monkeypatch) -> None:
         assert path.endswith("/versions")
         return {"id": "ver_1", "workflow": body.get("workflow")}
 
-    monkeypatch.setattr("app.worker.daemon.cloud_post", _fake_cloud_post)
+    monkeypatch.setattr("app.worker.local_runs.cloud_post", _fake_cloud_post)
     with daemon_client(state) as client, patch(
-        "app.worker.daemon.draft_svc.get_draft"
-    ) as get_draft, patch("app.worker.daemon.draft_svc.save_draft") as save_draft:
+        "app.worker.drafts.get_draft"
+    ) as get_draft, patch("app.worker.drafts.save_draft") as save_draft:
         get_draft.return_value = {
             "local_id": "draft_1",
             "workflow_id": "wf_1",
@@ -114,9 +114,9 @@ def test_publish_queues_when_cloud_unreachable(monkeypatch) -> None:
     def _raise_connect(*_args, **_kwargs):
         raise httpx.ConnectError("offline")
 
-    monkeypatch.setattr("app.worker.daemon.cloud_post", _raise_connect)
+    monkeypatch.setattr("app.worker.local_runs.cloud_post", _raise_connect)
     with daemon_client(state) as client, patch(
-        "app.worker.daemon.draft_svc.get_draft"
+        "app.worker.drafts.get_draft"
     ) as get_draft:
         get_draft.return_value = {
             "local_id": "draft_offline",
@@ -141,11 +141,11 @@ def test_publish_queue_flush_after_approval(monkeypatch) -> None:
         assert "wf_1" in path
         return {"id": "ver_2", "workflow": body.get("workflow")}
 
-    monkeypatch.setattr("app.worker.daemon.cloud_post", _fake_cloud_post)
+    monkeypatch.setattr("app.worker.local_runs.cloud_post", _fake_cloud_post)
 
-    with patch("app.worker.daemon.cred_svc.load_credentials", return_value=FAKE_CREDS), patch(
-        "app.worker.daemon.draft_svc.get_draft"
-    ) as get_draft, patch("app.worker.daemon.draft_svc.save_draft"):
+    with patch("app.worker.credentials.load_credentials", return_value=FAKE_CREDS), patch(
+        "app.worker.drafts.get_draft"
+    ) as get_draft, patch("app.worker.drafts.save_draft"):
         get_draft.return_value = {
             "local_id": "draft_q",
             "workflow_id": "wf_1",
@@ -153,12 +153,13 @@ def test_publish_queue_flush_after_approval(monkeypatch) -> None:
             "name": "Queued draft",
         }
 
-        from app.worker.daemon import _publish_draft_now
+        from app.worker.desktop_api import DesktopApi
 
         state = DaemonState(approval_status="approved", logged_in=True)
+        api = DesktopApi(state)
 
         def publish_fn(local_id: str) -> dict:
-            return _publish_draft_now(state, local_id)
+            return api._publish_draft_now(local_id)
 
         count = publish_queue_svc.flush_queue(
             publish_fn=publish_fn,

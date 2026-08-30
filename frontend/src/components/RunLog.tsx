@@ -85,6 +85,16 @@ function formatEventLabel(ev: RunEvent, t: ReturnType<typeof useTranslation>["t"
         arrived: String(ev.arrived ?? pickPayloadField(ev, "arrived") ?? "?"),
         expected: String(ev.expected ?? pickPayloadField(ev, "expected") ?? "?"),
       });
+    case "desktop_step":
+      return t("runLog.events.desktopStep", {
+        node: node || String(pickPayloadField(ev, "app") ?? ""),
+        action: String(pickPayloadField(ev, "action") ?? "step"),
+      });
+    case "vision_step":
+      return t("runLog.events.visionStep", {
+        node,
+        action: String(pickPayloadField(ev, "action") ?? "step"),
+      });
     default:
       return ev.event;
   }
@@ -196,6 +206,24 @@ function formatEventDetail(ev: RunEvent): string | null {
           : undefined);
       return edgeId ? `edge=${edgeId}` : null;
     }
+    case "desktop_step":
+    case "vision_step": {
+      const thought =
+        typeof pickPayloadField(ev, "thought") === "string"
+          ? (pickPayloadField(ev, "thought") as string)
+          : "";
+      const shot =
+        typeof pickPayloadField(ev, "screenshot_ref") === "string"
+          ? (pickPayloadField(ev, "screenshot_ref") as string)
+          : "";
+      const target = pickPayloadField(ev, "target_index");
+      const parts = [
+        thought ? `thought=${truncate(thought, 80)}` : null,
+        target !== undefined && target !== null ? `target=${String(target)}` : null,
+        shot ? `shot=${shot}` : null,
+      ].filter(Boolean);
+      return parts.length ? parts.join(" · ") : null;
+    }
     default:
       return ev.message ?? ev.error ?? null;
   }
@@ -286,6 +314,8 @@ const eventClasses: Record<string, string> = {
   branch_pruned: "text-muted-foreground/70",
   node_skipped: "text-muted-foreground/70",
   merge_waiting: "text-amber-400/80",
+  desktop_step: "text-cyan-300",
+  vision_step: "text-cyan-300",
 };
 
 export function RunLog() {

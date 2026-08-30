@@ -241,7 +241,9 @@ from app.routers.approvals import router as approvals_router
 from app.routers.browser_profiles import router as browser_profiles_router
 from app.routers.browser_sessions import router as browser_sessions_router
 from app.routers.route_skills import router as route_skills_router
+from app.routers.route_skill_proposals import router as route_skill_proposals_router
 from app.routers.chat import router as chat_router
+from app.routers.conversations import router as conversations_router
 from app.routers.credentials import router as credentials_router
 from app.routers.expressions import router as expressions_router
 from app.routers.integrations import router as integrations_router
@@ -272,7 +274,9 @@ app.include_router(recordings_router)
 app.include_router(browser_profiles_router)
 app.include_router(browser_sessions_router)
 app.include_router(route_skills_router)
+app.include_router(route_skill_proposals_router)
 app.include_router(chat_router)
+app.include_router(conversations_router)
 app.include_router(runs_router)
 app.include_router(approvals_router)
 app.include_router(credentials_router)

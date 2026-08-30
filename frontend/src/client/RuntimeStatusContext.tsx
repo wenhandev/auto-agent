@@ -8,13 +8,14 @@ import {
 } from "react";
 import {
   fetchCloudHealth,
-  fetchSidecarHealth,
+  fetchRuntimeHealth,
   waitForRuntime,
 } from "./api";
+import { desktopDefaultCloudUrl, isDesktopCloudUrlBakedIn } from "./cloudUrl";
 
 interface RuntimeStatus {
   cloudReady: boolean;
-  sidecarReady: boolean;
+  runtimeReady: boolean;
   ready: boolean;
   checking: boolean;
   retry: () => void;
@@ -27,25 +28,27 @@ const SOFT_TIMEOUT_MS = 8_000;
 
 export function RuntimeStatusProvider({ children }: { children: ReactNode }) {
   const [cloudReady, setCloudReady] = useState(false);
-  const [sidecarReady, setSidecarReady] = useState(false);
+  const [runtimeReady, setRuntimeReady] = useState(false);
   const [checking, setChecking] = useState(true);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    const cloudUrl = desktopDefaultCloudUrl();
     setChecking(true);
     setCloudReady(false);
-    setSidecarReady(false);
+    setRuntimeReady(false);
 
     async function pollOnce() {
-      const [cloud, sidecar] = await Promise.all([
-        fetchCloudHealth(),
-        fetchSidecarHealth(),
+      const [cloud, runtime] = await Promise.all([
+        fetchCloudHealth(cloudUrl),
+        fetchRuntimeHealth(),
       ]);
       if (cancelled) return;
       setCloudReady(cloud);
-      setSidecarReady(sidecar);
-      if (cloud && sidecar) {
+      setRuntimeReady(runtime);
+      const startupComplete = isDesktopCloudUrlBakedIn() ? runtime : cloud && runtime;
+      if (startupComplete) {
         setChecking(false);
       }
     }
@@ -59,10 +62,17 @@ export function RuntimeStatusProvider({ children }: { children: ReactNode }) {
       if (!cancelled) setChecking(false);
     }, SOFT_TIMEOUT_MS);
 
-    void waitForRuntime(45_000, POLL_MS).then((ok) => {
-      if (cancelled) return;
-      if (ok) setChecking(false);
-    });
+    if (isDesktopCloudUrlBakedIn()) {
+      void waitForRuntime(45_000, POLL_MS).then((ok) => {
+        if (cancelled) return;
+        if (ok) setChecking(false);
+      });
+    } else {
+      void waitForRuntime(45_000, POLL_MS, cloudUrl).then((ok) => {
+        if (cancelled) return;
+        if (ok) setChecking(false);
+      });
+    }
 
     return () => {
       cancelled = true;
@@ -71,15 +81,16 @@ export function RuntimeStatusProvider({ children }: { children: ReactNode }) {
     };
   }, [attempt]);
 
+  const production = isDesktopCloudUrlBakedIn();
   const value = useMemo(
     () => ({
       cloudReady,
-      sidecarReady,
-      ready: cloudReady && sidecarReady,
+      runtimeReady,
+      ready: production ? runtimeReady : cloudReady && runtimeReady,
       checking,
       retry: () => setAttempt((n) => n + 1),
     }),
-    [cloudReady, sidecarReady, checking],
+    [cloudReady, runtimeReady, checking, production],
   );
 
   return (

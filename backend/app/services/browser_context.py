@@ -20,6 +20,14 @@ DEFAULT_VIEWPORT = {
 }
 
 
+def _safe_get(db: Session, model: type, pk: str) -> Any | None:
+    """Worker bundles may ship without cloud SQLite tables."""
+    try:
+        return db.get(model, pk)
+    except Exception:
+        return None
+
+
 def resolve_context_options(
     run_id: str,
     profile_id: Optional[str] = None,
@@ -34,12 +42,12 @@ def resolve_context_options(
         if effective_profile_id is None:
             from app.db.models import Run
 
-            run = db.get(Run, run_id)
+            run = _safe_get(db, Run, run_id)
             if run is not None and run.browser_profile_id:
                 effective_profile_id = run.browser_profile_id
 
         if effective_profile_id:
-            profile = db.get(BrowserProfile, effective_profile_id)
+            profile = _safe_get(db, BrowserProfile, effective_profile_id)
             if profile is not None:
                 profile_opts = profile_svc.build_context_options(profile)
                 profile_opts.update(antibot_svc.profile_fingerprint_options(profile))

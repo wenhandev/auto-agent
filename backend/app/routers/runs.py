@@ -309,7 +309,7 @@ def create_run(
     parameters = body.get("parameters")
     totp_identifier = body.get("totp_identifier")
     record_video = body.get("record_video")
-    execution_mode = body.get("execution_mode") or "cloud"
+    execution_mode = body.get("execution_mode") or run_svc.default_execution_mode()
     worker_id = body.get("worker_id")
     worker_pool = body.get("worker_pool")
     try:
@@ -330,6 +330,8 @@ def create_run(
         raise HTTPException(422, detail=str(exc))
     except run_svc.QueueFullError as exc:
         raise HTTPException(429, detail=str(exc))
+    except run_svc.CloudExecutionDisabledError as exc:
+        raise HTTPException(400, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(404, detail=str(exc))
     return _run_to_out(run, db)
@@ -353,7 +355,10 @@ def create_run_for_workflow(
     parameters = body.parameters if body is not None else None
     totp_id = body.totp_identifier if body is not None else None
     record_video = body.record_video if body is not None else None
-    execution_mode = body.execution_mode if body is not None else "cloud"
+    execution_mode = (
+        body.execution_mode if body is not None and body.execution_mode is not None
+        else run_svc.default_execution_mode()
+    )
     worker_id = body.worker_id if body is not None else None
     worker_pool = body.worker_pool if body is not None else None
     try:
@@ -373,6 +378,8 @@ def create_run_for_workflow(
         raise HTTPException(422, detail=str(exc))
     except run_svc.QueueFullError as exc:
         raise HTTPException(429, detail=str(exc))
+    except run_svc.CloudExecutionDisabledError as exc:
+        raise HTTPException(400, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(404, detail=str(exc))
     return _run_to_out(run, db)

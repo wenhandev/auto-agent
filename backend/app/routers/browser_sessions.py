@@ -24,6 +24,7 @@ from app.schemas_api import (
 )
 from app.services import browser_sessions as session_svc
 from app.services import element_picker as picker_svc
+from app.services.control_plane_policy import require_edge_execution
 
 
 router = APIRouter(prefix="/api/browser-sessions", tags=["browser-sessions"])
@@ -73,6 +74,7 @@ async def create_browser_session(
     body: BrowserSessionCreate,
     session: Session = Depends(get_session),
 ) -> BrowserSessionOut:
+    require_edge_execution("browser_sessions")
     try:
         row = await session_svc.create_session(
             session,
@@ -114,6 +116,7 @@ def clear_browser_session_memory(
     session_id: str,
     session: Session = Depends(get_session),
 ) -> dict:
+    require_edge_execution("browser_sessions")
     try:
         entries = session_svc.clear_memory_entries(session, session_id)
     except session_svc.SessionNotAvailableError as exc:
@@ -125,6 +128,7 @@ def clear_browser_session_memory(
 async def keep_browser_session_alive(
     session_id: str, session: Session = Depends(get_session)
 ) -> BrowserSessionOut:
+    require_edge_execution("browser_sessions")
     try:
         row = await session_svc.keep_alive(session_id, session)
     except session_svc.SessionNotAvailableError as exc:
@@ -136,6 +140,7 @@ async def keep_browser_session_alive(
 async def close_browser_session(
     session_id: str, session: Session = Depends(get_session)
 ) -> BrowserSessionOut:
+    require_edge_execution("browser_sessions")
     row = session_svc.get_session_row(session_id, session)
     if row is None:
         raise HTTPException(404, detail="browser session not found")
@@ -152,6 +157,7 @@ async def close_browser_session(
 async def delete_browser_session(
     session_id: str, session: Session = Depends(get_session)
 ) -> dict:
+    require_edge_execution("browser_sessions")
     row = session_svc.get_session_row(session_id, session)
     if row is None:
         raise HTTPException(404, detail="browser session not found")
@@ -180,6 +186,7 @@ async def enable_session_picker(
     body: PickerEnableIn,
     session: Session = Depends(get_session),
 ) -> PickerEnableOut:
+    require_edge_execution("browser_sessions")
     try:
         result = await picker_svc.enable_picker(
             session_id, session, mode=body.mode
@@ -195,6 +202,7 @@ async def disable_session_picker(
     body: PickerDisableIn,
     session: Session = Depends(get_session),
 ) -> dict:
+    require_edge_execution("browser_sessions")
     try:
         return await picker_svc.disable_picker(
             session_id, session, picker_token=body.picker_token
@@ -209,6 +217,7 @@ async def navigate_browser_session(
     body: SessionNavigateIn,
     session: Session = Depends(get_session),
 ) -> SessionNavigateOut:
+    require_edge_execution("browser_sessions")
     try:
         result = await picker_svc.navigate_picker(
             session_id,
@@ -250,6 +259,7 @@ async def pick_browser_session_element(
     body: PickElementIn,
     session: Session = Depends(get_session),
 ) -> PickElementOut:
+    require_edge_execution("browser_sessions")
     try:
         result = await picker_svc.pick_element(
             session_id,
@@ -271,6 +281,7 @@ async def test_browser_session_selector(
     body: TestSelectorIn,
     session: Session = Depends(get_session),
 ) -> TestSelectorOut:
+    require_edge_execution("browser_sessions")
     try:
         result = await picker_svc.test_selector(
             session_id,

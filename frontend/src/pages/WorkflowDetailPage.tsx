@@ -20,6 +20,8 @@ import type {
 } from "@/types-platform";
 import { ChatPanelSlot } from "./ChatPanelSlot";
 import { WorkflowCredentialsPanel } from "./WorkflowCredentialsPanel";
+import { WorkflowCredentialsLocalHint } from "@/components/WorkflowCredentialsLocalHint";
+import { webPlatformPolicy } from "@/lib/webPlatformPolicy";
 import { WorkflowDetailHeader } from "./WorkflowDetailHeader";
 import { WorkflowTriggersPanel } from "./WorkflowTriggersPanel";
 import { Separator } from "@/components/ui/separator";
@@ -333,7 +335,11 @@ export function WorkflowDetailPage() {
           </div>
           <Separator />
           <div className="max-h-[280px] overflow-auto">
-            <WorkflowCredentialsPanel workflowId={workflowId} />
+            {webPlatformPolicy.showCloudCredentials ? (
+              <WorkflowCredentialsPanel workflowId={workflowId} />
+            ) : (
+              <WorkflowCredentialsLocalHint />
+            )}
           </div>
           <Separator />
           <div className="flex min-h-0 flex-1 flex-col">

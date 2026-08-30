@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "auto-agent-mcp"
 version = "0.1.0"
 description = "MCP server exposing auto-agent /api/v1 tools for AI IDEs."
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.11"
 dependencies = [
     "auto-agent-sdk>=0.1.0",

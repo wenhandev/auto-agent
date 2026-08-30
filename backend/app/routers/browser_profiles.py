@@ -15,6 +15,7 @@ from app.schemas_api import (
     ViewportSpec,
 )
 from app.services import browser_profiles as profile_svc
+from app.services.control_plane_policy import require_edge_execution
 from app.tools import browser as browser_tools
 from app.db.session import get_session
 
@@ -62,6 +63,7 @@ def list_browser_profiles(
 def create_browser_profile(
     body: BrowserProfileCreate, session: Session = Depends(get_session)
 ) -> BrowserProfileOut:
+    require_edge_execution("browser_profiles")
     existing = session.exec(
         select(BrowserProfile).where(BrowserProfile.name == body.name)
     ).first()
@@ -96,6 +98,7 @@ def update_browser_profile(
     body: BrowserProfileUpdate,
     session: Session = Depends(get_session),
 ) -> BrowserProfileOut:
+    require_edge_execution("browser_profiles")
     profile = session.get(BrowserProfile, profile_id)
     if profile is None:
         raise HTTPException(404, detail="browser profile not found")
@@ -125,6 +128,7 @@ def update_browser_profile(
 def delete_browser_profile(
     profile_id: str, session: Session = Depends(get_session)
 ) -> dict:
+    require_edge_execution("browser_profiles")
     profile = session.get(BrowserProfile, profile_id)
     if profile is None:
         raise HTTPException(404, detail="browser profile not found")
@@ -140,6 +144,7 @@ async def capture_profile_from_run(
     run_id: str,
     session: Session = Depends(get_session),
 ) -> BrowserProfileOut:
+    require_edge_execution("browser_profiles")
     profile = session.get(BrowserProfile, profile_id)
     if profile is None:
         raise HTTPException(404, detail="browser profile not found")

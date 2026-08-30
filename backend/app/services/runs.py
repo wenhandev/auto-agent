@@ -25,6 +25,26 @@ class QueueFullError(Exception):
     """Raised when the global run queue exceeds ``MAX_QUEUE_DEPTH``."""
 
 
+class CloudExecutionDisabledError(Exception):
+    """Raised when cloud execution is requested but the backend is worker-only."""
+
+
+def assert_execution_mode_allowed(execution_mode: str) -> None:
+    if (
+        execution_mode == "cloud"
+        and settings.execution_backend == "control_plane_only"
+    ):
+        raise CloudExecutionDisabledError(
+            "cloud execution is disabled; use execution_mode=worker"
+        )
+
+
+def default_execution_mode() -> str:
+    if settings.execution_backend == "control_plane_only":
+        return "worker"
+    return "cloud"
+
+
 # Per-workflow FIFO queues (run ids waiting for admission).
 _workflow_queues: dict[str, deque[str]] = {}
 # Round-robin order of workflows that have pending runs.
@@ -389,6 +409,7 @@ def enqueue_run(
     worker_id: Optional[str] = None,
     worker_pool: Optional[str] = None,
 ) -> Run:
+    assert_execution_mode_allowed(execution_mode)
     if _queued_run_count() >= settings.max_queue_depth:
         raise QueueFullError(
             f"run queue full (max {settings.max_queue_depth})"
@@ -499,6 +520,16 @@ def enqueue_run(
 
     _wakeup_dispatcher()
     return run
+
+
+def schedule_worker_run(run_id: str, workflow_id: str) -> None:
+    """Enqueue an existing run row for worker dispatch (autonomous tasks, etc.)."""
+    _workflow_queues.setdefault(workflow_id, deque()).append(run_id)
+    if workflow_id not in _rr_workflows:
+        _rr_workflows.append(workflow_id)
+    _global_queue_order.append(run_id)
+    _run_workflow[run_id] = workflow_id
+    _wakeup_dispatcher()
 
 
 def _persist_event(run_id: str, seq: int, payload: dict) -> None:
@@ -804,6 +835,9 @@ async def ingest_worker_event(run_id: str, seq: int, payload: dict) -> None:
             row.finished_at = _utcnow()
             if final_status == "failed":
                 row.error = enriched.get("error")
+            output = enriched.get("output")
+            if output is not None:
+                row.result_json = json.dumps(output, ensure_ascii=False, default=str)
             session.add(row)
             session.commit()
     from app.services import livestream as livestream_svc
@@ -823,8 +857,11 @@ async def ingest_worker_event(run_id: str, seq: int, payload: dict) -> None:
 
 
 __all__ = [
+    "CloudExecutionDisabledError",
     "QueueFullError",
+    "assert_execution_mode_allowed",
     "create_queued_run",
+    "default_execution_mode",
     "dispatcher_stats",
     "enqueue_run",
     "enqueue_run_standalone",
@@ -836,6 +873,7 @@ __all__ = [
     "remove_from_queue_for_tests",
     "request_abort",
     "reset_dispatcher_for_tests",
+    "schedule_worker_run",
     "subscribe",
     "unsubscribe",
     "fetch_prior_events",

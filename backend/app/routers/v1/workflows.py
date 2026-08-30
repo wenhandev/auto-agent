@@ -102,6 +102,12 @@ def run_workflow_v1(
     parameters = body.parameters if body is not None else None
     totp_id = body.totp_identifier if body is not None else None
     record_video = body.record_video if body is not None else None
+    execution_mode = (
+        body.execution_mode if body is not None and body.execution_mode is not None
+        else run_svc.default_execution_mode()
+    )
+    worker_id = body.worker_id if body is not None else None
+    worker_pool = body.worker_pool if body is not None else None
     try:
         run = run_svc.enqueue_run(
             workflow_id,
@@ -112,11 +118,16 @@ def run_workflow_v1(
             parameters=parameters,
             totp_identifier=totp_id,
             record_video=record_video,
+            execution_mode=execution_mode,
+            worker_id=worker_id,
+            worker_pool=worker_pool,
         )
     except param_svc.ParameterValidationError as exc:
         raise HTTPException(422, detail=str(exc)) from exc
     except run_svc.QueueFullError as exc:
         raise HTTPException(429, detail=str(exc)) from exc
+    except run_svc.CloudExecutionDisabledError as exc:
+        raise HTTPException(400, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(404, detail=str(exc)) from exc
     return _run_to_out(run, session)

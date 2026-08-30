@@ -65,8 +65,8 @@ def list_configs(session: Session = Depends(get_session)) -> list[LlmConfigOut]:
 def get_effective(session: Session = Depends(get_session)) -> LlmEffectiveOut:
     try:
         eff = llm_runtime.effective_settings(session)
-    except RuntimeError as exc:
-        raise HTTPException(400, detail=str(exc))
+    except RuntimeError:
+        return LlmEffectiveOut(source="none")
     return LlmEffectiveOut(
         source=eff.source,  # type: ignore[arg-type]
         provider=eff.provider,

@@ -122,7 +122,19 @@ _DESTRUCTIVE_KEYWORDS = (
     "confirm order",
     "place order",
     "submit payment",
+    "send message",
+    "send email",
+    "transfer",
+    "wire",
+    "支付",
+    "删除",
+    "发送",
 )
+
+
+def _label_is_destructive(label: str) -> bool:
+    lower = (label or "").lower()
+    return any(kw in lower for kw in _DESTRUCTIVE_KEYWORDS)
 
 
 def is_destructive_action(
@@ -135,6 +147,50 @@ def is_destructive_action(
         operation = str(args.get("operation", "")).lower()
         if operation in ("create", "update", "delete", "send", "write", "post"):
             return True
+    if tool_name in ("desktop_type", "desktop_key"):
+        blob = " ".join(
+            str(args.get(k) or "") for k in ("text", "key", "app", "instruction")
+        ).lower()
+        if _label_is_destructive(blob):
+            return True
+    if tool_name == "desktop_click":
+        # Never consult browser page elements for desktop indices.
+        desktop_obs = (
+            observation is not None
+            and str(getattr(observation, "url", "") or "").startswith("desktop://")
+        )
+        if not desktop_obs:
+            # Without a desktop observation we cannot map index→label safely.
+            # Coordinate or index clicks are treated as high-risk.
+            if (
+                args.get("x") is not None
+                or args.get("y") is not None
+                or args.get("index") is not None
+            ):
+                return True
+            blob = " ".join(
+                str(args.get(k) or "")
+                for k in ("app", "name", "label", "text", "instruction")
+            )
+            return _label_is_destructive(blob)
+        index = args.get("index")
+        if index is None:
+            # Coordinate clicks without a resolvable element are high-risk.
+            if args.get("x") is not None or args.get("y") is not None:
+                return True
+            return _label_is_destructive(str(args.get("app") or ""))
+        try:
+            idx = int(index)
+        except (TypeError, ValueError):
+            return True
+        if idx < 0 or idx >= len(observation.elements):
+            return True
+        el = observation.elements[idx]
+        label = f"{el.role} {el.name}".lower()
+        return _label_is_destructive(label) or (
+            el.role == "button" and _label_is_destructive(el.name)
+        )
+
     if tool_name in ("click_element", "type_text", "select_option"):
         if observation is None:
             return False
@@ -149,11 +205,9 @@ def is_destructive_action(
             return False
         el = observation.elements[idx]
         label = f"{el.role} {el.name}".lower()
-        if any(kw in label for kw in _DESTRUCTIVE_KEYWORDS):
+        if _label_is_destructive(label):
             return True
-        if el.role == "button" and any(
-            kw in el.name.lower() for kw in ("pay", "buy", "delete", "checkout")
-        ):
+        if el.role == "button" and _label_is_destructive(el.name):
             return True
     return False
 

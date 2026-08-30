@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "auto-agent-backend"
 version = "0.1.0"
 description = "Auto-agent backend POC: planner + fuzzy ADK agents + Playwright executor."
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",
@@ -28,6 +29,16 @@ dependencies = [
 [project.optional-dependencies]
 worker-build = [
     "pyinstaller>=6.6",
+]
+desktop-macos = [
+    "pyobjc-framework-Cocoa>=10.0",
+    "pyobjc-framework-Quartz>=10.0",
+    "pyobjc-framework-ApplicationServices>=10.0",
+]
+desktop-windows = [
+    "pywinauto>=0.6.8",
+    "Pillow>=10.0",
+    "pywin32>=306; platform_system=='Windows'",
 ]
 
 [tool.setuptools.packages.find]

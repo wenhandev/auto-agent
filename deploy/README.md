@@ -58,6 +58,8 @@ Health check: `curl -fsS https://rpa.wenhandev.com/api/health`
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Bootstrap admin account |
 | `OAUTH_CALLBACK_BASE` | `https://rpa.wenhandev.com` |
 | `FRONTEND_BASE_URL` | `https://rpa.wenhandev.com` |
+| `OAUTH_SIGNUP_POLICY` | `domain_allowlist` when using Google-only login |
+| `OAUTH_ALLOWED_EMAIL_DOMAINS` | Comma-separated domains allowed to auto-provision (e.g. `wenhandev.com`) |
 | `CORS_ORIGINS` | Include production domain + local dev if needed |
 | `DOMAIN` / `ACME_EMAIL` | Caddy TLS (compose env) |
 
@@ -119,6 +121,7 @@ docker compose up -d
 | Certificate pending | DNS propagated? Port 80 reachable from internet? |
 | 502 Bad Gateway | `docker compose logs app` — uvicorn startup errors |
 | Desktop login fails | Cloud URL exactly `https://rpa.wenhandev.com` (no trailing slash) |
+| OAuth `account_not_provisioned` | Set `OAUTH_SIGNUP_POLICY=domain_allowlist` and `OAUTH_ALLOWED_EMAIL_DOMAINS=yourdomain.com`, or add an OAuth domain rule in **Admin → Authentication** |
 | Worker stays pending | Admin must Approve in Settings → Workers |
 
 Data persists in Docker volume `deploy_app_data` (SQLite + Fernet keys under `/app/data`).

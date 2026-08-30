@@ -313,3 +313,42 @@ async def test_screencast_frame_ack_and_fanout(
     assert payload["width"] == 1024
     assert payload["height"] == 768
     assert payload["data"] == "ZmFrZWpwZWc="
+
+
+@pytest.mark.asyncio
+async def test_set_control_notifies_viewers_and_blocks_agent() -> None:
+    session = LivestreamSession("control-run")
+    livestream_svc.hub._sessions["control-run"] = session
+    ws = AsyncMock()
+    await session.add_viewer(ws)
+
+    assert livestream_svc.user_has_control("control-run") is False
+    await session.set_control("user")
+    assert session.holder == "user"
+    assert livestream_svc.user_has_control("control-run") is True
+
+    sent = [call.args[0] for call in ws.send_json.await_args_list]
+    assert sent[-1]["type"] == "control"
+    assert sent[-1]["holder"] == "user"
+
+    fake_cdp = AsyncMock()
+    session._cdp = fake_cdp
+    session._device = (200, 100)
+    await session.dispatch_input(
+        {"kind": "mouse", "event": "pressed", "x": 0.5, "y": 0.5, "clicks": 1}
+    )
+    fake_cdp.send.assert_awaited()
+    args = fake_cdp.send.await_args.args
+    assert args[0] == "Input.dispatchMouseEvent"
+    assert args[1]["x"] == 100
+    assert args[1]["y"] == 50
+
+    await session.set_control("agent")
+    assert livestream_svc.user_has_control("control-run") is False
+
+
+@pytest.mark.asyncio
+async def test_handle_viewer_set_control_message() -> None:
+    session = LivestreamSession("msg-run")
+    await session.handle_viewer_message('{"type":"set_control","holder":"user"}')
+    assert session.holder == "user"

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Check, Trash2, X } from "lucide-react";
 import { apiClient } from "@/api-platform";
 import { useAuth } from "@/auth/useAuth";
@@ -31,30 +32,12 @@ import {
 
 const QK_WORKERS = ["workers", "list"] as const;
 
-function envBadge(status: WorkerOut["environment_status"]) {
-  const map = {
-    ready: { label: "就绪", variant: "default" as const },
-    degraded: { label: "降级", variant: "secondary" as const },
-    not_ready: { label: "未就绪", variant: "destructive" as const },
-    unknown: { label: "未知", variant: "outline" as const },
-  };
-  return map[status] ?? map.unknown;
-}
-
-function approvalBadge(status: WorkerApprovalStatus) {
-  const map = {
-    pending: { label: "待授权", variant: "secondary" as const },
-    approved: { label: "已授权", variant: "default" as const },
-    rejected: { label: "已拒绝", variant: "destructive" as const },
-  };
-  return map[status] ?? map.pending;
-}
-
 function canManageWorkers(role: string | null | undefined): boolean {
   return role === "owner" || role === "admin";
 }
 
 export function WorkersPanel() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user, bypass } = useAuth();
   const canManage = bypass || canManageWorkers(user?.role);
@@ -88,30 +71,66 @@ export function WorkersPanel() {
     rejectMutation.isPending ||
     revokeMutation.isPending;
 
+  function envBadge(status: WorkerOut["environment_status"]) {
+    const map = {
+      ready: { label: t("pages.settings.workersEnvReady"), variant: "default" as const },
+      degraded: {
+        label: t("pages.settings.workersEnvDegraded"),
+        variant: "secondary" as const,
+      },
+      not_ready: {
+        label: t("pages.settings.workersEnvNotReady"),
+        variant: "destructive" as const,
+      },
+      unknown: {
+        label: t("pages.settings.workersEnvUnknown"),
+        variant: "outline" as const,
+      },
+    };
+    return map[status] ?? map.unknown;
+  }
+
+  function approvalBadge(status: WorkerApprovalStatus) {
+    const map = {
+      pending: {
+        label: t("pages.settings.workersApprovalPending"),
+        variant: "secondary" as const,
+      },
+      approved: {
+        label: t("pages.settings.workersApprovalApproved"),
+        variant: "default" as const,
+      },
+      rejected: {
+        label: t("pages.settings.workersApprovalRejected"),
+        variant: "destructive" as const,
+      },
+    };
+    return map[status] ?? map.pending;
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Workers</CardTitle>
-        <CardDescription>
-          已通过 Auto Agent Client 登录的本机设备（约 10 秒刷新）。
-        </CardDescription>
+        <CardTitle className="text-base">{t("pages.settings.workersTitle")}</CardTitle>
+        <CardDescription>{t("pages.settings.workersDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         {workersQuery.isLoading && (
-          <p className="text-sm text-muted-foreground">加载中…</p>
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         )}
         {workersQuery.error && (
-          <p className="text-sm text-destructive">无法加载 Workers 列表</p>
+          <p className="text-sm text-destructive">
+            {t("pages.settings.workersLoadError")}
+          </p>
         )}
         {workersQuery.data && workersQuery.data.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            暂无已连接的设备。请让用户安装{" "}
-            <strong>Auto Agent Client</strong>，使用云地址登录；管理员在此批准设备。{" "}
+            {t("pages.settings.workersEmpty")}{" "}
             <Link
               to={ROUTES.clientDownload}
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              下载客户端
+              {t("pages.settings.workersDownloadClient")}
             </Link>
           </p>
         )}
@@ -119,14 +138,16 @@ export function WorkersPanel() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>名称 / 主机</TableHead>
-                <TableHead>用户</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>授权</TableHead>
-                <TableHead>环境</TableHead>
-                <TableHead>标签</TableHead>
-                <TableHead>运行中</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead>{t("pages.settings.workersTableNameHost")}</TableHead>
+                <TableHead>{t("pages.settings.workersTableUser")}</TableHead>
+                <TableHead>{t("pages.settings.workersTableStatus")}</TableHead>
+                <TableHead>{t("pages.settings.workersTableApproval")}</TableHead>
+                <TableHead>{t("pages.settings.workersTableEnvironment")}</TableHead>
+                <TableHead>{t("pages.settings.workersTableTags")}</TableHead>
+                <TableHead>{t("pages.settings.workersTableRunning")}</TableHead>
+                <TableHead className="text-right">
+                  {t("pages.settings.workersTableActions")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -136,12 +157,11 @@ export function WorkersPanel() {
                 const failedChecks = worker.environment_checks.filter(
                   (c) => c.status === "fail" || c.status === "warn",
                 );
+                const workerName = worker.display_name || worker.hostname;
                 return (
                   <TableRow key={worker.id}>
                     <TableCell>
-                      <div className="font-medium">
-                        {worker.display_name || worker.hostname}
-                      </div>
+                      <div className="font-medium">{workerName}</div>
                       <div className="text-xs text-muted-foreground">
                         {worker.hostname}
                       </div>
@@ -155,7 +175,9 @@ export function WorkersPanel() {
                           worker.status === "online" ? "default" : "secondary"
                         }
                       >
-                        {worker.status === "online" ? "在线" : "离线"}
+                        {worker.status === "online"
+                          ? t("pages.settings.workersOnline")
+                          : t("pages.settings.workersOffline")}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -200,7 +222,7 @@ export function WorkersPanel() {
                               }
                             >
                               <Check className="mr-1 h-4 w-4" />
-                              批准
+                              {t("pages.settings.workersApprove")}
                             </Button>
                             <Button
                               variant="outline"
@@ -209,7 +231,9 @@ export function WorkersPanel() {
                               onClick={() => {
                                 if (
                                   window.confirm(
-                                    `拒绝 Worker「${worker.display_name || worker.hostname}」？`,
+                                    t("pages.settings.workersRejectConfirm", {
+                                      name: workerName,
+                                    }),
                                   )
                                 ) {
                                   rejectMutation.mutate(worker.id);
@@ -217,7 +241,7 @@ export function WorkersPanel() {
                               }}
                             >
                               <X className="mr-1 h-4 w-4" />
-                              拒绝
+                              {t("pages.settings.workersReject")}
                             </Button>
                           </>
                         )}
@@ -229,7 +253,9 @@ export function WorkersPanel() {
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  `撤销 Worker「${worker.display_name || worker.hostname}」？`,
+                                  t("pages.settings.workersRevokeConfirm", {
+                                    name: workerName,
+                                  }),
                                 )
                               ) {
                                 revokeMutation.mutate(worker.id);
@@ -237,7 +263,7 @@ export function WorkersPanel() {
                             }}
                           >
                             <Trash2 className="mr-1 h-4 w-4" />
-                            撤销
+                            {t("pages.settings.workersRevoke")}
                           </Button>
                         )}
                       </div>

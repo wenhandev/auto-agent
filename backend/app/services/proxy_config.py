@@ -18,6 +18,13 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _safe_db_get(db: Session, model: type, pk: str) -> Any | None:
+    try:
+        return db.get(model, pk)
+    except Exception:
+        return None
+
+
 def mask_proxy_dict(proxy: dict[str, Any]) -> dict[str, Any]:
     """Return a trace-safe proxy dict with credentials masked."""
     out = dict(proxy)
@@ -83,7 +90,7 @@ def resolve_proxy_for_run(
     owns = session is None
     db = session or Session(engine)
     try:
-        run = db.get(Run, run_id)
+        run = _safe_db_get(db, Run, run_id)
         if run is None and profile_id is None:
             return _fallback_default(db)
 
@@ -91,11 +98,11 @@ def resolve_proxy_for_run(
         if run is not None and run.proxy_id:
             proxy_id = run.proxy_id
         elif profile_id:
-            profile = db.get(BrowserProfile, profile_id)
+            profile = _safe_db_get(db, BrowserProfile, profile_id)
             if profile is not None and profile.proxy_id:
                 proxy_id = profile.proxy_id
         elif run is not None and run.browser_profile_id:
-            profile = db.get(BrowserProfile, run.browser_profile_id)
+            profile = _safe_db_get(db, BrowserProfile, run.browser_profile_id)
             if profile is not None and profile.proxy_id:
                 proxy_id = profile.proxy_id
 

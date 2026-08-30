@@ -12,10 +12,13 @@ from app.db.models import Recording
 from app.db.session import get_session
 from app.schemas_api import (
     RecordingCreate,
+    RecordingDistillIn,
+    RecordingDistillOut,
     RecordingEventIn,
     RecordingEventsIn,
     RecordingGenerateOut,
     RecordingOut,
+    RouteSkillProposalOut,
 )
 from app.services.recording import (
     get_active_events,
@@ -24,9 +27,28 @@ from app.services.recording import (
     start_recording,
     stop_recording,
 )
+from app.services.control_plane_policy import require_edge_execution
+from app.services.trajectory_distillation import distill_recording_async
 
 
 router = APIRouter(prefix="/api/recordings", tags=["recordings"])
+
+
+def _proposal_out(row) -> RouteSkillProposalOut:
+    return RouteSkillProposalOut(
+        id=row.id,
+        source_type=row.source_type,
+        source_id=row.source_id,
+        org_id=row.org_id,
+        domain=row.domain,
+        capability=row.capability,
+        url_pattern=row.url_pattern,
+        prompt=row.prompt,
+        status=row.status,  # type: ignore[arg-type]
+        adopted_route_skill_id=row.adopted_route_skill_id,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
 
 
 def _utcnow() -> datetime:
@@ -69,6 +91,7 @@ def list_recordings(session: Session = Depends(get_session)) -> list[RecordingOu
 async def create_recording(
     body: RecordingCreate, session: Session = Depends(get_session)
 ) -> RecordingOut:
+    require_edge_execution("recordings")
     try:
         recording = await start_recording(
             session,
@@ -98,6 +121,7 @@ def get_recording(
 async def stop_recording_route(
     recording_id: str, session: Session = Depends(get_session)
 ) -> RecordingOut:
+    require_edge_execution("recordings")
     try:
         recording = await stop_recording(session, recording_id)
     except ValueError as exc:
@@ -113,6 +137,7 @@ def append_recording_events(
     body: RecordingEventsIn,
     session: Session = Depends(get_session),
 ) -> list[dict[str, Any]]:
+    require_edge_execution("recordings")
     recording = session.get(Recording, recording_id)
     if recording is None:
         raise HTTPException(404, detail="recording not found")
@@ -138,6 +163,7 @@ def generate_workflow_from_recording(
     recording_id: str,
     session: Session = Depends(get_session),
 ) -> RecordingGenerateOut:
+    require_edge_execution("recordings")
     recording = session.get(Recording, recording_id)
     if recording is None:
         raise HTTPException(404, detail="recording not found")
@@ -145,6 +171,7 @@ def generate_workflow_from_recording(
         raise HTTPException(409, detail="stop the recording before generating")
     if recording.status == "synthesized" and recording.generated_workflow_id:
         from app.services import workflows as workflow_svc
+        from app.services.trajectory_distillation import list_proposals_for_recording
 
         chat = workflow_svc.ensure_chat_session(recording.generated_workflow_id, session)
         graph: dict[str, Any] = {}
@@ -153,17 +180,22 @@ def generate_workflow_from_recording(
                 graph = json.loads(recording.generated_workflow_json)
             except Exception:
                 graph = {}
+        proposals = list_proposals_for_recording(session, recording.id)
         return RecordingGenerateOut(
             recording_id=recording.id,
             workflow_id=recording.generated_workflow_id,
             chat_session_id=chat.id,
             workflow=graph,
+            route_skill_proposals=[_proposal_out(p) for p in proposals],
+            distill_mode="rule",
         )
     if recording.status != "stopped":
         raise HTTPException(409, detail="recording must be stopped before generating")
 
     try:
-        workflow_id, graph, chat_id = synthesize_from_recording(recording, session)
+        workflow_id, graph, chat_id, proposals = synthesize_from_recording(
+            recording, session
+        )
     except Exception as exc:
         raise HTTPException(422, detail=f"synthesis failed: {exc}") from exc
 
@@ -172,6 +204,49 @@ def generate_workflow_from_recording(
         workflow_id=workflow_id,
         chat_session_id=chat_id,
         workflow=graph,
+        route_skill_proposals=[_proposal_out(p) for p in proposals],
+        distill_mode="rule",
+    )
+
+
+@router.post("/{recording_id}/distill", response_model=RecordingDistillOut)
+async def distill_recording_route(
+    recording_id: str,
+    body: RecordingDistillIn | None = None,
+    session: Session = Depends(get_session),
+) -> RecordingDistillOut:
+    require_edge_execution("recordings")
+    recording = session.get(Recording, recording_id)
+    if recording is None:
+        raise HTTPException(404, detail="recording not found")
+    if recording.status == "active":
+        raise HTTPException(409, detail="stop the recording before distilling")
+    if recording.status not in ("stopped", "synthesized"):
+        raise HTTPException(409, detail="recording must be stopped before distilling")
+
+    use_llm = bool(body and body.use_llm)
+    try:
+        result = await distill_recording_async(
+            recording, session, use_llm=use_llm
+        )
+    except Exception as exc:
+        raise HTTPException(422, detail=f"distillation failed: {exc}") from exc
+
+    segments = [
+        {
+            "domain": segment.domain,
+            "url_pattern": segment.url_pattern,
+            "capability": segment.capability,
+            "event_count": len(segment.events),
+        }
+        for segment in result.segments
+    ]
+    return RecordingDistillOut(
+        recording_id=recording.id,
+        distill_mode=result.mode,
+        segments=segments,
+        workflow=result.workflow_graph,
+        route_skill_proposals=[_proposal_out(p) for p in result.proposals],
     )
 
 

@@ -121,7 +121,7 @@ export function SettingsLlmTab() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {effectiveQuery.data && (
+        {effectiveQuery.data && effectiveQuery.data.source !== "none" && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border bg-muted/40 px-4 py-3 text-xs">
             <Badge variant="secondary">
               {t("pages.settings.effectiveBannerLabel")}
@@ -142,6 +142,14 @@ export function SettingsLlmTab() {
               {t("pages.settings.effectiveKey")}:{" "}
               <code className="font-mono">{effectiveQuery.data.api_key_masked}</code>
             </span>
+          </div>
+        )}
+        {effectiveQuery.data?.source === "none" && (
+          <div className="rounded-md border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            {t(
+              "pages.settings.effectiveNone",
+              "No LLM configuration is active yet. Save a provider and model below.",
+            )}
           </div>
         )}
         {effectiveQuery.error && (
@@ -183,6 +191,8 @@ export function SettingsLlmTab() {
             <Label htmlFor="settings-model">{t("pages.settings.modelLabel")}</Label>
             <Input
               id="settings-model"
+              name="llm-model"
+              autoComplete="off"
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder={provider === "openai" ? "gpt-4o-mini" : "gemini-2.0-flash"}
@@ -218,13 +228,10 @@ export function SettingsLlmTab() {
             <div className="flex items-center justify-between gap-4">
               <div className="grid gap-0.5">
                 <Label htmlFor="settings-selfheal">
-                  {t("pages.settings.selfHealLabel", "选择器自愈")}
+                  {t("pages.settings.selfHealLabel")}
                 </Label>
                 <span className="text-xs text-muted-foreground">
-                  {t(
-                    "pages.settings.selfHealDescription",
-                    "当选择器失效时，用视觉模型推断替代选择器并重试。",
-                  )}
+                  {t("pages.settings.selfHealDescription")}
                 </span>
               </div>
               <Switch
@@ -237,7 +244,7 @@ export function SettingsLlmTab() {
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="settings-selfheal-threshold">
-                    {t("pages.settings.selfHealThresholdLabel", "视觉置信度阈值")}
+                    {t("pages.settings.selfHealThresholdLabel")}
                   </Label>
                   <span className="font-mono text-xs text-muted-foreground">
                     {selfHealThreshold.toFixed(2)}

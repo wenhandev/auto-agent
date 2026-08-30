@@ -841,6 +841,72 @@ async def _run_node(
             reason = result.get("reason") or "vision_extract_failed"
             raise RuntimeError(f"vision_extract failed: {reason}")
         return result
+    if t in ("desktop_open", "desktop_act", "desktop_navigate", "desktop_extract"):
+        from app.agents.desktop import DesktopAgent, resolve_desktop_decide
+        from app.services.desktop_computer_use import (
+            DesktopAppBusyError,
+            DesktopSessionUnavailableError,
+            hold_desktop_app,
+            require_interactive_session,
+            resolve_desktop_backend,
+        )
+
+        app = str(p.get("app") or "")
+        if not app:
+            raise RuntimeError(f"{t} requires params.app")
+        try:
+            require_interactive_session()
+            backend = resolve_desktop_backend()
+            agent = DesktopAgent(
+                backend=backend,
+                decide=resolve_desktop_decide(),
+            )
+            holder = run_id or node.id
+
+            async def on_desktop_step(step: dict) -> None:
+                await emit("desktop_step", node_id=node.id, **step)
+
+            if t == "desktop_open":
+                with hold_desktop_app(app, holder):
+                    info = await backend.open_app(app)
+                return {
+                    "app_id": info.app_id,
+                    "name": info.name,
+                    "bundle_id": info.bundle_id,
+                }
+            if t == "desktop_act":
+                return await agent.run_act(
+                    app,
+                    str(p.get("instruction") or ""),
+                    on_step=on_desktop_step,
+                    holder_id=holder,
+                )
+            if t == "desktop_navigate":
+                max_steps = p.get("max_steps")
+                return await agent.run_navigate(
+                    app,
+                    str(p.get("goal") or p.get("instruction") or ""),
+                    max_steps=int(max_steps) if max_steps is not None else 10,
+                    on_step=on_desktop_step,
+                    holder_id=holder,
+                )
+            schema = p.get("schema")
+            if schema is not None and not isinstance(schema, dict):
+                schema = None
+            result = await agent.run_extract(
+                app,
+                str(p.get("instruction") or ""),
+                schema=schema,
+                on_step=on_desktop_step,
+                holder_id=holder,
+            )
+            if result.get("completed") is False:
+                raise RuntimeError(
+                    f"desktop_extract failed: {result.get('reason') or 'unknown'}"
+                )
+            return result
+        except (DesktopAppBusyError, DesktopSessionUnavailableError) as exc:
+            raise RuntimeError(str(exc)) from exc
     if t == "condition":
         from app.services.flow_conditions import (
             FlowConditionError,

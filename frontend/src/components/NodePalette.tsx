@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import {
+  AppWindow,
   Clock,
   Database,
   Filter,
@@ -24,7 +25,7 @@ import {
 } from "@/inspector/insertFlowNode";
 import type { NodeType } from "@/types";
 
-const GROUP_ORDER: PaletteGroup[] = ["browser", "flow", "data"];
+const GROUP_ORDER: PaletteGroup[] = ["browser", "desktop", "flow", "data"];
 
 const NODE_ICONS: Partial<Record<NodeType, typeof Globe>> = {
   navigate: Globe,
@@ -33,6 +34,10 @@ const NODE_ICONS: Partial<Record<NodeType, typeof Globe>> = {
   wait: Clock,
   extract: ScanSearch,
   fuzzy_action: Sparkles,
+  desktop_open: AppWindow,
+  desktop_act: MousePointerClick,
+  desktop_navigate: Globe,
+  desktop_extract: ScanSearch,
   condition: GitBranch,
   switch: Split,
   set: Database,

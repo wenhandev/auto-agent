@@ -57,7 +57,7 @@ def _ws_url(cloud_url: str) -> str:
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
-    env = asyncio.run(preflight.run_doctor(args.cloud_url))
+    env = asyncio.run(preflight.run_doctor(args.cloud_url, agent_version=AGENT_VERSION))
     print(json.dumps(env, indent=2, ensure_ascii=False))
     return 1 if env.get("environment_status") == "not_ready" else 0
 
@@ -70,7 +70,7 @@ def cmd_login(args: argparse.Namespace) -> int:
     password = args.password or getpass.getpass("Password: ")
 
     machine_id = args.machine_id or _machine_id()
-    env = asyncio.run(preflight.run_doctor(cloud_url))
+    env = asyncio.run(preflight.run_doctor(cloud_url, agent_version=AGENT_VERSION))
 
     payload = {
         "email": email,
@@ -159,18 +159,21 @@ def cmd_logout(_args: argparse.Namespace) -> int:
 def cmd_install_browsers(_args: argparse.Namespace) -> int:
     """Download Chromium for Playwright (required once per machine)."""
     try:
-        from playwright.__main__ import main as playwright_main
+        import playwright  # noqa: F401
     except ImportError:
         print("playwright is not installed", file=sys.stderr)
         return 1
     print("Installing Chromium for Playwright (may take a few minutes)…")
-    playwright_main(["install", "chromium"])
+    preflight.install_chromium()
     print("Done. Run: auto-agent-worker doctor")
     return 0
 
 
 def _frozen_bootstrap() -> None:
     """When running as a PyInstaller bundle, use the exe directory as cwd."""
+    browsers_dir = cred_svc.CREDENTIALS_DIR / "browsers"
+    browsers_dir.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(browsers_dir))
     if getattr(sys, "frozen", False):
         os.chdir(Path(sys.executable).resolve().parent)
 
@@ -178,7 +181,9 @@ def _frozen_bootstrap() -> None:
 async def _run_worker_loop(cloud_url: str, token: str, env: dict[str, Any]) -> None:
     url = f"{_ws_url(cloud_url)}?token={token}"
 
-    async with websockets.connect(url, ping_interval=20, ping_timeout=20) as ws:
+    async with websockets.connect(
+        url, ping_interval=20, ping_timeout=20, proxy=None
+    ) as ws:
 
         async def send_frame(frame: dict[str, Any]) -> None:
             await ws.send(json.dumps(frame, default=str))
@@ -241,7 +246,14 @@ async def _run_worker_loop(cloud_url: str, token: str, env: dict[str, Any]) -> N
 def cmd_serve(args: argparse.Namespace) -> int:
     from app.worker.daemon import run_daemon
 
-    run_daemon(host=args.host, port=args.port)
+    run_daemon(host=args.host, port=args.port, uds=args.uds)
+    return 0
+
+
+def cmd_desktop_host(args: argparse.Namespace) -> int:
+    from app.worker.desktop_host import run_desktop_host_sync
+
+    run_desktop_host_sync(ipc_uds=args.ipc_uds, stream_uds=args.stream_uds)
     return 0
 
 
@@ -265,7 +277,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         if _wait_for_approval(cloud_url, token) != 0:
             return 1
 
-    env = asyncio.run(preflight.run_doctor(cloud_url))
+    env = asyncio.run(preflight.run_doctor(cloud_url, agent_version=AGENT_VERSION))
     if env.get("environment_status") == "not_ready":
         print("environment not ready; run: auto-agent-worker doctor", file=sys.stderr)
         print(json.dumps(env, indent=2))
@@ -320,7 +332,28 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=3921)
+    serve.add_argument(
+        "--uds",
+        default=None,
+        help="Unix domain socket path (monolith desktop; no TCP port)",
+    )
     serve.set_defaults(func=cmd_serve)
+
+    desktop_host = sub.add_parser(
+        "desktop-host",
+        help="run desktop runtime (framed JSON IPC + optional stream relay UDS)",
+    )
+    desktop_host.add_argument(
+        "--ipc-uds",
+        required=True,
+        help="Unix socket for framed JSON RPC (Phase 4B)",
+    )
+    desktop_host.add_argument(
+        "--stream-uds",
+        default=None,
+        help="Unix socket for HTTP SSE/WS relay until stream IPC lands",
+    )
+    desktop_host.set_defaults(func=cmd_desktop_host)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

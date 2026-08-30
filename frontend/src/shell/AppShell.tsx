@@ -18,6 +18,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { useAuth } from "@/auth/useAuth";
+import { webPlatformPolicy } from "@/lib/webPlatformPolicy";
 import { ROUTES, routePath } from "@/routes";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const NAV_ITEMS: NavItem[] = [
+const ALL_NAV_ITEMS: NavItem[] = [
   { to: routePath.workflows(), labelKey: "nav.workflows", icon: Workflow },
   { to: routePath.tasks(), labelKey: "nav.tasks", icon: Bot },
   { to: routePath.recordings(), labelKey: "nav.recordings", icon: CircleDot },
@@ -49,6 +50,22 @@ const NAV_ITEMS: NavItem[] = [
   { to: routePath.settings(), labelKey: "nav.settings", icon: SettingsIcon },
   { to: routePath.clientDownload(), labelKey: "nav.clientDownload", icon: Download },
 ];
+
+function visibleNavItems(): NavItem[] {
+  return ALL_NAV_ITEMS.filter((item) => {
+    if (item.to === routePath.recordings()) return webPlatformPolicy.showRecordings;
+    if (item.to === routePath.browserSessions()) {
+      return webPlatformPolicy.showBrowserSessions;
+    }
+    if (item.to === routePath.browserProfiles()) {
+      return webPlatformPolicy.showBrowserProfiles;
+    }
+    if (item.to === routePath.credentials()) {
+      return webPlatformPolicy.showCloudCredentials;
+    }
+    return true;
+  });
+}
 
 function readCollapsed(): boolean {
   try {
@@ -127,7 +144,7 @@ export function AppShell() {
             </Button>
           </div>
           <nav className="flex flex-1 flex-col gap-0.5 px-2 py-2">
-            {NAV_ITEMS.map((item) => {
+            {visibleNavItems().map((item) => {
               const Icon = item.icon;
               const label = t(item.labelKey);
               const link = (

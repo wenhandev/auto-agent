@@ -32,7 +32,7 @@
     "platformAdmin": "Platform Admin",
     "clientDownload": "Download Client",
     "brand": "Auto Agent",
-    "footer": "local single-user POC",
+    "footer": "Cloud admin console",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar"
   },
@@ -57,8 +57,10 @@
     "workflows": {
       "title": "Workflows",
       "subtitle": "workflows",
+      "subtitleWeb": "View and run published workflows. Create and edit in the desktop client.",
       "empty": "No workflows yet",
       "emptyHint": "Click below to create your first workflow",
+      "emptyHintWeb": "No published workflows yet. Create workflows in the desktop client, then publish to the cloud.",
       "createCta": "New Workflow",
       "newButton": "New",
       "noDescription": "No description",
@@ -181,13 +183,19 @@
       "noObjective": "No objective",
       "summary": "Result",
       "plan": "Plan",
-      "actions": "Browser actions",
-      "noActions": "No browser actions were recorded for this run.",
+      "actions": "Agent actions",
+      "noActions": "No vision or desktop actions were recorded for this run.",
+      "desktopStep": "Desktop",
+      "visionStep": "Vision",
       "resultSuccess": "Succeeded",
       "resultFailed": "Failed",
       "failureReason": "Failure reason",
       "running": "Running",
-      "stepsTaken": "{{count}} steps taken"
+      "stepsTaken": "{{count}} steps taken",
+      "routeSkillsTitle": "Route skill proposals",
+      "distillRouteSkills": "Distill route skills",
+      "distilling": "Distilling...",
+      "proposalsEmpty": "Click distill to generate route skill proposals from this successful run."
     },
     "members": {
       "title": "Organization Members",
@@ -233,6 +241,19 @@
       "tabWorkers": "Workers",
       "tabApi": "API Keys",
       "tabWebhooks": "Webhooks",
+      "tabRouteSkills": "Route skills",
+      "routeSkillsTitle": "Route skills",
+      "routeSkillsDescription": "URL-scoped prompt knowledge injected during autonomous browser tasks. Enable skills after adopting distilled proposals.",
+      "routeSkillsEmpty": "No route skills yet. Adopt proposals from recordings or successful autonomous tasks.",
+      "routeSkillsUrl": "URL pattern",
+      "routeSkillsScope": "Scope",
+      "routeSkillsEnabled": "Enabled",
+      "routeSkillsActions": "Actions",
+      "routeSkillsViewBuckets": "By site",
+      "routeSkillsViewList": "All skills",
+      "routeSkillsCapability": "Capability",
+      "routeSkillsPending": "Pending",
+      "routeSkillsNotAdopted": "Not adopted",
       "languageSectionTitle": "Interface Language",
       "languageDescription": "Choose the language used across the interface",
       "languageLabel": "Language",
@@ -344,7 +365,47 @@
         "run_rejected": "Run rejected",
         "run_aborted": "Run aborted",
         "approval_requested": "Approval requested"
-      }
+      },
+      "selfHealLabel": "Selector self-healing",
+      "selfHealDescription": "When a selector fails, use a vision model to infer an alternative selector and retry.",
+      "selfHealThresholdLabel": "Vision confidence threshold",
+      "workersPolicyTitle": "Client policy",
+      "workersPolicyDescription": "Control Auto Agent Client registration and execution permissions (admins only).",
+      "workersPolicyLabel": "Policy",
+      "workersPolicyApprovalRequired": "Require admin approval",
+      "workersPolicyApprovalRequiredDesc": "New devices must be approved by an admin before running tasks (recommended).",
+      "workersPolicyOpen": "Auto-approve",
+      "workersPolicyOpenDesc": "Devices are approved automatically on first login (dev/small teams).",
+      "workersPolicyDisabled": "Disable clients",
+      "workersPolicyDisabledDesc": "Block client login and connections.",
+      "workersPolicyLoadError": "Could not load organization settings",
+      "workersTitle": "Workers",
+      "workersDescription": "Devices signed in via Auto Agent Client (refreshes about every 10 seconds).",
+      "workersLoadError": "Could not load workers list",
+      "workersEmpty": "No connected devices yet. Ask users to install Auto Agent Client, sign in with your cloud URL, and approve devices here.",
+      "workersDownloadClient": "Download client",
+      "workersTableNameHost": "Name / host",
+      "workersTableUser": "User",
+      "workersTableStatus": "Status",
+      "workersTableApproval": "Approval",
+      "workersTableEnvironment": "Environment",
+      "workersTableTags": "Tags",
+      "workersTableRunning": "Running",
+      "workersTableActions": "Actions",
+      "workersOnline": "Online",
+      "workersOffline": "Offline",
+      "workersApprove": "Approve",
+      "workersReject": "Reject",
+      "workersRevoke": "Revoke",
+      "workersRejectConfirm": "Reject worker \"{{name}}\"?",
+      "workersRevokeConfirm": "Revoke worker \"{{name}}\"?",
+      "workersEnvReady": "Ready",
+      "workersEnvDegraded": "Degraded",
+      "workersEnvNotReady": "Not ready",
+      "workersEnvUnknown": "Unknown",
+      "workersApprovalPending": "Pending",
+      "workersApprovalApproved": "Approved",
+      "workersApprovalRejected": "Rejected"
     }
   },
   "chat": {
@@ -389,7 +450,9 @@
       "runRejected": "Run rejected",
       "branchPruned": "Branch pruned · {{edge}}",
       "nodeSkipped": "Skipped · {{node}}",
-      "mergeWaiting": "Merge waiting · {{node}} ({{arrived}}/{{expected}})"
+      "mergeWaiting": "Merge waiting · {{node}} ({{arrived}}/{{expected}})",
+      "desktopStep": "Desktop · {{node}} · {{action}}",
+      "visionStep": "Vision · {{node}} · {{action}}"
     },
     "itemsCount": "{{count}} items"
   },
@@ -487,6 +550,7 @@
     "insertOnSelectedEdge": "Click a node type to insert on the selected connection.",
     "group": {
       "browser": "Browser",
+      "desktop": "Desktop",
       "flow": "Flow",
       "data": "Data"
     },
@@ -496,6 +560,10 @@
     "wait": "Wait",
     "extract": "Extract",
     "fuzzyAction": "Fuzzy action",
+    "desktopOpen": "Desktop open",
+    "desktopAct": "Desktop act",
+    "desktopNavigate": "Desktop navigate",
+    "desktopExtract": "Desktop extract",
     "set": "Set",
     "filter": "Filter",
     "merge": "Merge",
@@ -609,6 +677,7 @@
     "executionMode": "Run on local worker",
     "executionModeCloudHint": "Browser runs on the cloud server",
     "executionModeWorkerHint": "Browser runs on a connected worker machine",
+    "executionModeWorkerOnly": "Worker only (cloud disabled)",
     "workerPool": "Worker pool",
     "workerPin": "Pin to worker (optional)",
     "workerPinAny": "Any available worker"
@@ -746,6 +815,28 @@
     "loginPrompt": "Need to run automations locally?",
     "loginLink": "Download Auto Agent Client"
   },
+  "webPlatform": {
+    "credentialsLocalHint": "Credentials are stored only on your desktop client or worker device, not in the cloud. Configure them locally, then run workflows from this console.",
+    "desktopOnly": {
+      "downloadCta": "Download desktop client",
+      "recordings": {
+        "title": "Recordings are desktop-only",
+        "description": "Use the Auto Agent desktop client to record browser actions and generate workflows."
+      },
+      "browserSessions": {
+        "title": "Browser sessions are desktop-only",
+        "description": "Live browser sessions run on your local machine. Manage them in the desktop client."
+      },
+      "browserProfiles": {
+        "title": "Browser profiles are desktop-only",
+        "description": "Saved browser profiles stay on your device. Create and manage them in the desktop client."
+      },
+      "credentials": {
+        "title": "Credentials are stored locally",
+        "description": "Secrets are kept on your desktop client or worker, not in cloud storage. Open the desktop client to add or edit credentials."
+      }
+    }
+  },
   "livestream": {
     "title": "Live preview",
     "live": "Live",
@@ -759,7 +850,10 @@
     "unavailableHint": "Could not connect to the live stream",
     "headed": "Local browser",
     "headedHint": "Running in a local browser window — live preview is disabled to avoid screen flicker",
-    "dimensions": "{{width}} × {{height}}"
+    "dimensions": "{{width}} × {{height}}",
+    "takeControl": "Take control",
+    "giveBack": "Give back",
+    "youAreDriving": "You are driving this page — the agent's clicks and typing are paused until you give control back."
   },
   "tasks": {
     "title": "Autonomous Tasks",
@@ -777,6 +871,8 @@
     "successCriteriaPlaceholder": "Return the product price as a number",
     "requireConfirmationLabel": "Require confirmation",
     "requireConfirmationHint": "Pause for human approval on sensitive actions",
+    "enableDesktopToolsLabel": "Native desktop tools",
+    "enableDesktopToolsHint": "Allow list_apps / open_app / desktop_click… (AX/UIA). With a start URL, browser tools stay available too.",
     "startTask": "Start task",
     "starting": "Starting..."
   },
@@ -901,7 +997,18 @@
       "active": "Active",
       "stopped": "Stopped",
       "synthesized": "Synthesized"
-    }
+    },
+    "proposalsTitle": "Route skill proposals",
+    "proposalsEmpty": "No pending proposals. Generate a workflow to distill route skills from this recording.",
+    "proposalsEmptyStopped": "Generate a workflow to distill route skills from this recording.",
+    "proposalsPreview": "Preview",
+    "proposalsHide": "Hide",
+    "proposalsAdopt": "Adopt",
+    "proposalsDismiss": "Dismiss",
+    "adoptMergeTitle": "Merge into existing route skill?",
+    "adoptMergeDescription": "This URL pattern already has a route skill. The proposal will be appended to the existing prompt.",
+    "adoptMergeExisting": "Existing skill for {{pattern}}",
+    "adoptMergeConfirm": "Confirm merge"
   },
   "elementPicker": {
     "title": "Pick Element",
@@ -924,5 +1031,225 @@
     "errorPick": "Could not pick element",
     "errorTest": "Selector test failed",
     "errorSession": "Could not create session"
+  },
+  "taskFailure": {
+    "generic": "The task could not be completed.",
+    "reasons": {
+      "no_progress": "The agent stopped making progress and could not continue.",
+      "time_budget_exhausted": "The task ran out of time before completing.",
+      "step_budget_exhausted": "The task used all allowed steps before completing.",
+      "error": "The task could not be completed due to a browser error.",
+      "guardrail": "The task was blocked by a safety or navigation rule.",
+      "schema_validation_failed": "Collected data did not match the required format.",
+      "aborted": "The task was cancelled."
+    }
+  },
+  "desktop": {
+    "nav": {
+      "home": "Home",
+      "runs": "Run history",
+      "cloudSection": "Cloud",
+      "autonomousTask": "Autonomous task"
+    },
+    "signedIn": "Signed in",
+    "signOut": "Sign out",
+    "splash": {
+      "starting": "Starting Auto Agent…",
+      "loadingSession": "Loading your session…",
+      "startingDefault": "Starting…"
+    },
+    "runtime": {
+      "startingProduction": "Auto Agent is still starting. Local run features will be available shortly.",
+      "startingDev": "Starting local services… ({{parts}} not ready yet). Some features may fail until both are running.",
+      "localCloud": "local cloud",
+      "localRuntime": "local runtime",
+      "and": " and ",
+      "retry": "Retry"
+    },
+    "home": {
+      "welcome": "Welcome back, {{name}}",
+      "welcomeFallback": "there",
+      "subtitle": "Run workflows on this device or manage them from the cloud.",
+      "runsTitle": "Runs",
+      "runsDescription": "View cloud run history or execute workflows on this device.",
+      "runsCta": "View run history",
+      "workflowsTitle": "Workflows",
+      "workflowsDescription": "Create and edit cloud workflows, pull local drafts, or publish changes.",
+      "workflowsCta": "View workflows",
+      "settingsTitle": "Settings",
+      "settingsDescription": "Profile, local LLM keys, and device readiness.",
+      "settingsCta": "Open settings",
+      "deviceTitle": "This device",
+      "deviceDescription": "Quick status — details in Settings → Device status",
+      "online": "Online",
+      "offline": "Offline",
+      "offlineHint": "Sign in and ensure your organization approved this device if required.",
+      "offlineHintNotSignedIn": "Sign in to connect this device to your organization.",
+      "offlineHintWorkerDisconnected": "Worker lost cloud connection. Runs from the web will wait until this device reconnects.",
+      "setupHint": "Local setup is still completing — browser components may be downloading.",
+      "viewDeviceStatus": "View device status",
+      "agentComposerLabel": "Message",
+      "agentPlaceholder": "Ask the agent to do something…",
+      "agentSend": "Send",
+      "agentEmpty": "Send a message to start.",
+      "agentQueued": "Queued: {{objective}}",
+      "agentError": "Could not start or send the conversation."
+    },
+    "workerCloud": {
+      "bannerTitle": "Worker not connected to cloud",
+      "bannerDescription": "Runs started from the web will show \"Waiting for worker\" until this device reconnects. Restart the app or open Device status for details.",
+      "retry": "Reconnect",
+      "retrying": "Reconnecting…",
+      "viewDeviceStatus": "Device status"
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "Create and edit workflows in the cloud, with optional local drafts for offline publish.",
+      "refresh": "Refresh",
+      "cloudTitle": "Cloud workflows",
+      "cloudDescription": "Open to edit on canvas, chat, run, credentials, and triggers — same as the web app.",
+      "empty": "No workflows found.",
+      "localDraft": "Local draft",
+      "cloudOnly": "Cloud only",
+      "edit": "Edit",
+      "pullDraft": "Pull draft",
+      "localTitle": "Local drafts",
+      "localDescription": "Offline copies pulled from cloud — edit locally and publish when ready.",
+      "localEmpty": "No local drafts yet.",
+      "queuedPublish": "Queued for publish",
+      "publish": "Publish",
+      "publishing": "Publishing…",
+      "open": "Open",
+      "draftNotFound": "Draft not found.",
+      "draftOfflineHint": "This draft is not linked to a cloud workflow. Pull from a cloud workflow to enable chat and publish.",
+      "localDraftsError": "Local drafts: {{error}}",
+      "cloudError": "Cloud workflows: {{error}}",
+      "sessionExpired": "Your cloud sign-in session has expired. Worker is still online, but workflows and runs from the cloud need a fresh sign-in.",
+      "signInAgain": "Sign in again",
+      "back": "Workflows",
+      "untitled": "Workflow"
+    },
+    "runs": {
+      "tabHistory": "Run history",
+      "tabConsole": "Local console",
+      "title": "Run console",
+      "subtitle": "Execute workflows on this device.",
+      "startTitle": "Start run",
+      "startDescription": "Workflows from your cloud organisation",
+      "selectWorkflow": "Select workflow",
+      "runLocally": "Run locally",
+      "abort": "Abort",
+      "runLabel": "Run {{id}}",
+      "waitingEvents": "Waiting for events…",
+      "recentTitle": "Recent local runs",
+      "recentEmpty": "No local runs yet.",
+      "localReplayTitle": "Local run {{id}}",
+      "localReplaySubtitle": "Event log and browser view from this device.",
+      "eventLog": "Event log",
+      "noEvents": "No events recorded.",
+      "backToConsole": "Back to local console"
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Profile, local AI keys, and this device's readiness for runs.",
+      "deviceProfileTitle": "Device profile",
+      "deviceProfileDescription": "How this computer appears in your organization's device list.",
+      "displayName": "Display name",
+      "tags": "Tags (comma-separated)",
+      "tagsPlaceholder": "default, pool-a",
+      "saved": "Saved",
+      "localLlmTitle": "Local LLM",
+      "localLlmDescription": "Encrypted at rest in ~/.auto-agent-worker/llm.json (Fernet key in .key).",
+      "provider": "Provider",
+      "providerGoogle": "Google / Gemini",
+      "providerOpenai": "OpenAI",
+      "geminiProvider": "Gemini provider",
+      "geminiAiStudio": "AI Studio (API key)",
+      "geminiVertex": "Vertex AI",
+      "model": "Model",
+      "gcpProject": "GCP project",
+      "gcpLocation": "GCP location",
+      "googleApiKey": "Google API key",
+      "googleApiKeyKeep": "Leave blank to keep saved key",
+      "openaiModel": "Model",
+      "openaiApiKey": "OpenAI API key",
+      "saveLlm": "Save LLM settings",
+      "computerUseTitle": "Native desktop Computer Use",
+      "computerUseDescription": "Authorize native apps for AX/UIA + screenshot automation. This is separate from the browser Playwright “computer use” coordinate fallback toggle in cloud/admin settings.",
+      "computerUseAvailable": "Native desktop Computer Use is available on this device.",
+      "computerUseUnavailable": "Native desktop Computer Use is not available on this runtime (missing platform extras or unsupported OS).",
+      "computerUseLoading": "Loading Computer Use settings…",
+      "alwaysAllowedApps": "Always-allowed apps",
+      "noAlwaysAllowed": "No apps on the Always allow list yet.",
+      "allowAppPlaceholder": "Bundle id or app name (e.g. com.apple.TextEdit)",
+      "allowApp": "Always allow",
+      "revokeApp": "Revoke",
+      "deviceStatusTitle": "Device status",
+      "deviceStatusDescription": "Browser setup, disk space, and cloud connection for this computer.",
+      "viewDeviceStatus": "View device status"
+    },
+    "device": {
+      "title": "Device status",
+      "subtitle": "Connection and local requirements for running workflows on this computer.",
+      "backHome": "Back to Home",
+      "cloudLinkTitle": "Cloud link",
+      "cloudLinkDescription": "Whether this device is connected to your organization",
+      "online": "Online",
+      "offline": "Offline",
+      "cloudConnectedHint": "This device can receive and run assigned workflows.",
+      "cloudDisconnectedHint": "Sign in and wait for approval if your organization requires it.",
+      "localSetupTitle": "Local setup",
+      "localSetupDescription": "Browser and system checks on this Mac",
+      "checking": "Checking this device…"
+    },
+    "envStatus": {
+      "ready": "Ready",
+      "degraded": "Limited",
+      "not_ready": "Setup needed",
+      "unknown": "Checking…"
+    },
+    "checks": {
+      "playwright_installed": "Browser automation",
+      "chromium_binary": "Chromium browser",
+      "disk_space": "Disk space",
+      "memory": "Memory",
+      "cloud_reachable": "Cloud connection"
+    },
+    "login": {
+      "subtitleBakedIn": "Sign in to connect this computer to your workspace.",
+      "subtitleDefault": "Sign in to connect this device to your cloud workspace.",
+      "oauthPendingTitle": "Check your browser to sign in…",
+      "oauthPendingHint": "Complete Google sign-in in your browser, then return here.",
+      "cancel": "Cancel",
+      "openBrowserAgain": "Open browser again",
+      "cloudUrl": "Cloud URL",
+      "cloudUrlPlaceholder": "https://your-cloud.example.com",
+      "loadingSignIn": "Loading sign-in…",
+      "continueGoogle": "Continue with Google",
+      "or": "or",
+      "email": "Email",
+      "password": "Password",
+      "invalidCredentials": "Invalid email or password.",
+      "clientsDisabled": "Clients are disabled for this organisation.",
+      "signingIn": "Signing in…",
+      "signInPassword": "Sign in with password",
+      "version": "Version {{version}}"
+    },
+    "oauth": {
+      "noCode": "Google sign-in failed. No authorization code returned.",
+      "missingCloudUrl": "Missing cloud URL. Start sign-in from the login screen again.",
+      "failedTitle": "Sign-in failed",
+      "backToLogin": "Back to login",
+      "completing": "Completing sign-in…",
+      "registering": "Registering this device as a worker."
+    },
+    "pending": {
+      "rejectedTitle": "Device rejected",
+      "rejectedDescription": "An administrator rejected this device. Contact your org admin or sign out and try again.",
+      "waitingTitle": "Waiting for admin approval",
+      "waitingDescription": "Your device is registered but cannot run workflows until an organisation admin approves it in Settings → Workers.",
+      "checkingInterval": "Checking every 10 seconds…",
+      "checkNow": "Check now"
+    }
   }
 }

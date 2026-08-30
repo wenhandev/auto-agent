@@ -13,6 +13,7 @@ if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
 
 from app.services.perception import (
+    control_tree,
     elements_from_ax_snapshot,
     perceive,
     resolve_element,
@@ -76,6 +77,14 @@ def test_compact_payload_omits_static_noise() -> None:
     assert len(payload["elements"]) == 4
     assert payload["elements"][2]["role"] == "button"
     assert "children" not in payload
+    assert "2. [button] Add to cart" in payload["tree"]
+
+
+def test_control_tree_is_numbered_click_list() -> None:
+    elements = elements_from_ax_snapshot(FIXTURE_AX)
+    tree = control_tree(elements)
+    assert tree.splitlines()[0] == "0. [link] Home"
+    assert "2. [button] Add to cart" in tree
 
 
 class _BlankPage:

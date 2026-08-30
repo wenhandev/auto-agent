@@ -234,3 +234,9 @@ output payload reports `{"completed": false, "reason":
 "max_steps_reached", "last_observation": ...}` — useful for debugging
 without crashing the workflow. Bump `FUZZY_MAX_STEPS` in `backend/.env`
 if you need a longer ceiling for harder tasks.
+
+## License
+
+Licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-or-later). If you run a modified version of this project as a network service, you must make the Corresponding Source of your modified version available to users of that service (see LICENSE section 13).
+
+**WorkerX exception.** The copyright holder grants the Bosch WorkerX project an additional permission (AGPL §7) to use Auto Agent ideas and code under WorkerX’s own license, without AGPL copyleft applying to WorkerX. See [GRANT-WORKERX.md](GRANT-WORKERX.md). This does not relicense Auto Agent for anyone else.

@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Sparkles, Square } from "lucide-react";
 import { apiClient, ApiError } from "@/api-platform";
+import { RouteSkillProposalsPanel } from "@/components/RouteSkillProposalsPanel";
 import { routePath } from "@/routes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +80,9 @@ export function RecordingDetailPage() {
         queryKey: QK_DETAIL(recordingId ?? ""),
       });
       void queryClient.invalidateQueries({ queryKey: QK_LIST });
+      void queryClient.invalidateQueries({
+        queryKey: ["route-skill-proposals", "recording", recordingId ?? ""],
+      });
       navigate(routePath.workflowDetail(result.workflow_id));
     },
   });
@@ -218,6 +222,18 @@ export function RecordingDetailPage() {
         <div className="mx-6 mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
           {generateError}
         </div>
+      )}
+
+      {recording.status !== "active" && (
+        <RouteSkillProposalsPanel
+          sourceType="recording"
+          sourceId={recording.id}
+          emptyHint={
+            recording.status === "stopped"
+              ? t("recordings.proposalsEmptyStopped")
+              : t("recordings.proposalsEmpty")
+          }
+        />
       )}
 
       <div className="flex-1 p-6">

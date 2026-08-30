@@ -588,3 +588,106 @@ def test_non_admin_cannot_approve_worker(client: TestClient) -> None:
     )
     assert res.status_code == 403
 
+
+def test_cloud_execution_rejected_when_control_plane_only(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.db.models import Workflow, WorkflowVersion
+    from app.settings import settings
+
+    monkeypatch.setattr(settings, "execution_backend", "control_plane_only")
+    email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
+    password = "secret-pass"
+    with Session(engine) as session:
+        _user, org = _bootstrap_user(session, email, password, role="admin")
+        wf = Workflow(name="wf-cloud-block", org_id=org.id)
+        session.add(wf)
+        session.flush()
+        ver = WorkflowVersion(
+            workflow_id=wf.id,
+            version_index=1,
+            nodes_json="[]",
+            edges_json="[]",
+            start_id="start",
+            authored_by="test",
+        )
+        session.add(ver)
+        session.flush()
+        wf.current_version_id = ver.id
+        session.add(wf)
+        session.commit()
+        wf_id = wf.id
+
+    token = _web_login(client, email, password)
+    res = client.post(
+        "/api/runs",
+        json={"workflow_id": wf_id, "execution_mode": "cloud"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
+    assert "worker" in res.json()["detail"].lower()
+
+
+def test_worker_oauth_login_with_session_token(client: TestClient) -> None:
+    from app.auth.session import create_session_token
+
+    email = f"oauth-worker-{uuid.uuid4().hex[:8]}@example.com"
+    password = "secret-pass"
+    with Session(engine) as session:
+        user, _org = _bootstrap_user(session, email, password)
+        user_id = user.id
+
+    session_token = create_session_token(user_id)
+    machine_id = f"machine-{uuid.uuid4().hex}"
+    res = client.post(
+        "/api/v1/workers/login/oauth",
+        json={
+            "session_token": session_token,
+            "machine_id": machine_id,
+            "hostname": "oauth-host",
+            "environment": {
+                "environment_status": "ready",
+                "checks": [],
+                "capabilities": {"platform": "Darwin", "agent_version": "0.1.0"},
+            },
+        },
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["worker_session_token"]
+    assert body["worker_id"]
+
+
+def test_worker_oauth_login_with_exchange_code(client: TestClient) -> None:
+    from app.services.oauth.exchange_store import issue_exchange_code, reset_exchange_store_for_tests
+
+    reset_exchange_store_for_tests()
+    email = f"oauth-worker-{uuid.uuid4().hex[:8]}@example.com"
+    password = "secret-pass"
+    with Session(engine) as session:
+        user, _org = _bootstrap_user(session, email, password)
+        code = issue_exchange_code(user_id=user.id)
+
+    machine_id = f"machine-{uuid.uuid4().hex}"
+    res = client.post(
+        "/api/v1/workers/login/oauth",
+        json={
+            "oauth_exchange_code": code,
+            "machine_id": machine_id,
+            "hostname": "oauth-host",
+        },
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["worker_session_token"]
+
+
+def test_runtime_settings_endpoint(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.settings import settings
+
+    monkeypatch.setattr(settings, "execution_backend", "control_plane_only")
+    res = client.get("/api/settings/runtime")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["execution_backend"] == "control_plane_only"
+    assert body["worker_only"] is True
+

@@ -217,10 +217,13 @@ def synthesize_from_recording(
     session: Session,
     *,
     workflow_name: Optional[str] = None,
-) -> tuple[str, dict[str, Any], str]:
-    """Build draft workflow + seeded chat from a stopped recording."""
-    events = load_events(recording)
-    graph = trace_to_graph(events, recording_name=recording.name)
+) -> tuple[str, dict[str, Any], str, list[Any]]:
+    """Build draft workflow + seeded chat + route skill proposals from a recording."""
+    from app.services.trajectory_distillation import distill_recording
+
+    result = distill_recording(recording, session)
+    graph = result.workflow_graph
+    proposals = result.proposals
     validate_workflow_graph(graph)
 
     name = workflow_name or f"Draft: {recording.name or recording.id[:8]}"
@@ -255,7 +258,7 @@ def synthesize_from_recording(
     session.refresh(recording)
     session.refresh(workflow)
 
-    return workflow.id, graph, chat.id
+    return workflow.id, graph, chat.id, proposals
 
 
 async def synthesize_with_llm(
@@ -263,11 +266,48 @@ async def synthesize_with_llm(
     session: Session,
     *,
     workflow_name: Optional[str] = None,
-) -> tuple[str, dict[str, Any], str]:
-    """LLM synthesis hook — falls back to rule-based graph for MVP."""
-    return synthesize_from_recording(
-        recording, session, workflow_name=workflow_name
+) -> tuple[str, dict[str, Any], str, list[Any]]:
+    """LLM workflow synthesis with route skill proposals."""
+    from app.services.trajectory_distillation import distill_recording_async
+
+    result = await distill_recording_async(recording, session, use_llm=True)
+    graph = result.workflow_graph
+    proposals = result.proposals
+    validate_workflow_graph(graph)
+
+    name = workflow_name or f"Draft: {recording.name or recording.id[:8]}"
+    description = f"{_SYNTH_MARKER}\n\nSource recording: {recording.id}"
+
+    workflow = workflow_svc.create_workflow(
+        name=name,
+        session=session,
+        description=description,
+        initial_workflow_json=graph,
+        authored_by="planner",
     )
+    row = session.get(Workflow, workflow.id)
+    if row is not None:
+        row.status = "draft"
+        session.add(row)
+
+    chat = workflow_svc.ensure_chat_session(workflow.id, session)
+    seed = ChatMessage(
+        session_id=chat.id,
+        role="user",
+        content=_SEED_CHAT_MESSAGE,
+        created_at=workflow.created_at,
+    )
+    session.add(seed)
+
+    recording.generated_workflow_id = workflow.id
+    recording.generated_workflow_json = json.dumps(graph, ensure_ascii=False)
+    recording.status = "synthesized"
+    session.add(recording)
+    session.commit()
+    session.refresh(recording)
+    session.refresh(workflow)
+
+    return workflow.id, graph, chat.id, proposals
 
 
 __all__ = [

@@ -8,6 +8,7 @@ import { SettingsSecurityTab } from "@/pages/settings/SettingsSecurityTab";
 import { SettingsWorkersTab } from "@/pages/settings/SettingsWorkersTab";
 import { SettingsApiTab } from "@/pages/settings/SettingsApiTab";
 import { SettingsWebhooksTab } from "@/pages/settings/SettingsWebhooksTab";
+import { SettingsRouteSkillsTab } from "@/pages/settings/SettingsRouteSkillsTab";
 
 const SETTINGS_TABS = [
   "general",
@@ -16,6 +17,7 @@ const SETTINGS_TABS = [
   "workers",
   "api",
   "webhooks",
+  "routeSkills",
 ] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number];
@@ -70,6 +72,9 @@ export function SettingsPage() {
             <TabsTrigger value="webhooks">
               {t("pages.settings.tabWebhooks")}
             </TabsTrigger>
+            <TabsTrigger value="routeSkills">
+              {t("pages.settings.tabRouteSkills")}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
@@ -89,6 +94,9 @@ export function SettingsPage() {
           </TabsContent>
           <TabsContent value="webhooks">
             <SettingsWebhooksTab />
+          </TabsContent>
+          <TabsContent value="routeSkills">
+            <SettingsRouteSkillsTab />
           </TabsContent>
         </Tabs>
       </div>

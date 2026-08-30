@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter
 
-from app.schemas_api import AntibotSettingsOut
+from app.schemas_api import AntibotSettingsOut, RuntimeSettingsOut
 from app.settings import settings
 
 
@@ -24,6 +24,15 @@ def _mask_url(url: str | None) -> str | None:
     if parsed.username or parsed.password:
         return f"{parsed.scheme}://***@{host}{parsed.path or ''}"
     return f"{parsed.scheme}://{host}{parsed.path or ''}"
+
+
+@router.get("/runtime", response_model=RuntimeSettingsOut)
+def get_runtime_settings() -> RuntimeSettingsOut:
+    worker_only = settings.execution_backend == "control_plane_only"
+    return RuntimeSettingsOut(
+        execution_backend=settings.execution_backend,
+        worker_only=worker_only,
+    )
 
 
 @router.get("/antibot", response_model=AntibotSettingsOut)

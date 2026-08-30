@@ -270,7 +270,7 @@ async def test_synthesize_from_recording_persists_graph() -> None:
         session.commit()
         session.refresh(recording)
 
-        wf_id, graph, chat_id = synthesize_from_recording(recording, session)
+        wf_id, graph, chat_id, _proposals = synthesize_from_recording(recording, session)
         assert wf_id
         assert graph["nodes"]
         assert chat_id

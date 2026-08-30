@@ -21,6 +21,7 @@ RUN apt-get update \
 
 COPY backend/pyproject.toml backend/README.md* ./
 COPY backend/app ./app
+COPY backend/static ./static
 
 RUN pip install --upgrade pip \
     && pip install .

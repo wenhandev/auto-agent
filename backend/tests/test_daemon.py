@@ -41,12 +41,12 @@ def daemon_client() -> TestClient:
         worker_id="wk_test",
         environment={"environment_status": "ready", "checks": []},
     )
-    with patch("app.worker.daemon._poll_worker_status", _idle_forever), patch(
-        "app.worker.daemon._worker_ws_loop", _idle_forever
-    ), patch("app.worker.daemon._run_preflight", return_value=None), patch(
-        "app.worker.daemon._restart_worker_ws", new=AsyncMock()
-    ), patch("app.worker.daemon._flush_publish_queue", new=AsyncMock()), patch(
-        "app.worker.daemon.cred_svc.load_credentials", return_value=FAKE_CREDS
+    with patch("app.worker.desktop_runtime.poll_worker_status", _idle_forever), patch(
+        "app.worker.desktop_runtime.worker_ws_loop", _idle_forever
+    ), patch("app.worker.desktop_runtime.bootstrap_environment", new=AsyncMock()), patch(
+        "app.worker.desktop_runtime.restart_worker_ws", new=AsyncMock()
+    ), patch("app.worker.desktop_runtime.flush_publish_queue", new=AsyncMock()), patch(
+        "app.worker.credentials.load_credentials", return_value=FAKE_CREDS
     ):
         app = create_daemon_app(state)
         with TestClient(app) as client:
@@ -60,7 +60,7 @@ def test_daemon_health(daemon_client: TestClient) -> None:
 
 
 def test_daemon_ready(daemon_client: TestClient) -> None:
-    with patch("app.worker.daemon.httpx.Client") as mock_client_cls:
+    with patch("app.worker.desktop_api.httpx.Client") as mock_client_cls:
         mock_client = mock_client_cls.return_value.__enter__.return_value
         mock_client.get.return_value.status_code = 200
         res = daemon_client.get("/ready")
@@ -87,12 +87,12 @@ def test_daemon_runs_blocked_when_pending() -> None:
         cloud_url="http://127.0.0.1:8001",
         worker_id="wk_test",
     )
-    with patch("app.worker.daemon._poll_worker_status", _idle_forever), patch(
-        "app.worker.daemon._worker_ws_loop", _idle_forever
-    ), patch("app.worker.daemon._run_preflight", return_value=None), patch(
-        "app.worker.daemon._restart_worker_ws", new=AsyncMock()
-    ), patch("app.worker.daemon._flush_publish_queue", new=AsyncMock()), patch(
-        "app.worker.daemon.cred_svc.load_credentials", return_value=FAKE_CREDS
+    with patch("app.worker.desktop_runtime.poll_worker_status", _idle_forever), patch(
+        "app.worker.desktop_runtime.worker_ws_loop", _idle_forever
+    ), patch("app.worker.desktop_runtime.bootstrap_environment", new=AsyncMock()), patch(
+        "app.worker.desktop_runtime.restart_worker_ws", new=AsyncMock()
+    ), patch("app.worker.desktop_runtime.flush_publish_queue", new=AsyncMock()), patch(
+        "app.worker.credentials.load_credentials", return_value=FAKE_CREDS
     ):
         app = create_daemon_app(state)
         with TestClient(app) as client:
@@ -117,12 +117,12 @@ def test_daemon_start_run_when_approved() -> None:
         cloud_url="http://127.0.0.1:8001",
         worker_id="wk_test",
     )
-    with patch("app.worker.daemon._poll_worker_status", _idle_forever), patch(
-        "app.worker.daemon._worker_ws_loop", _idle_forever
-    ), patch("app.worker.daemon._run_preflight", return_value=None), patch(
-        "app.worker.daemon._restart_worker_ws", new=AsyncMock()
-    ), patch("app.worker.daemon._flush_publish_queue", new=AsyncMock()), patch(
-        "app.worker.daemon.cred_svc.load_credentials", return_value=FAKE_CREDS), patch.object(
+    with patch("app.worker.desktop_runtime.poll_worker_status", _idle_forever), patch(
+        "app.worker.desktop_runtime.worker_ws_loop", _idle_forever
+    ), patch("app.worker.desktop_runtime.bootstrap_environment", new=AsyncMock()), patch(
+        "app.worker.desktop_runtime.restart_worker_ws", new=AsyncMock()
+    ), patch("app.worker.desktop_runtime.flush_publish_queue", new=AsyncMock()), patch(
+        "app.worker.credentials.load_credentials", return_value=FAKE_CREDS), patch.object(
         LocalRunManager, "start_run", _fake_start_run
     ), patch("app.worker.local_runs.require_configured"):
         app = create_daemon_app(state)
@@ -140,12 +140,12 @@ def test_daemon_abort_run() -> None:
         worker_id="wk_test",
     )
     state.runs._active["local_abort1"] = asyncio.Event()
-    with patch("app.worker.daemon._poll_worker_status", _idle_forever), patch(
-        "app.worker.daemon._worker_ws_loop", _idle_forever
-    ), patch("app.worker.daemon._run_preflight", return_value=None), patch(
-        "app.worker.daemon._restart_worker_ws", new=AsyncMock()
-    ), patch("app.worker.daemon._flush_publish_queue", new=AsyncMock()), patch(
-        "app.worker.daemon.cred_svc.load_credentials", return_value=FAKE_CREDS):
+    with patch("app.worker.desktop_runtime.poll_worker_status", _idle_forever), patch(
+        "app.worker.desktop_runtime.worker_ws_loop", _idle_forever
+    ), patch("app.worker.desktop_runtime.bootstrap_environment", new=AsyncMock()), patch(
+        "app.worker.desktop_runtime.restart_worker_ws", new=AsyncMock()
+    ), patch("app.worker.desktop_runtime.flush_publish_queue", new=AsyncMock()), patch(
+        "app.worker.credentials.load_credentials", return_value=FAKE_CREDS):
         app = create_daemon_app(state)
         with TestClient(app) as client:
             state.runs.get_run = lambda _rid: {  # type: ignore[method-assign]
@@ -203,13 +203,13 @@ def test_daemon_publish_blocked_when_pending() -> None:
         cloud_url="http://127.0.0.1:8001",
         worker_id="wk_test",
     )
-    with patch("app.worker.daemon._poll_worker_status", _idle_forever), patch(
-        "app.worker.daemon._worker_ws_loop", _idle_forever
-    ), patch("app.worker.daemon._run_preflight", return_value=None), patch(
-        "app.worker.daemon._restart_worker_ws", new=AsyncMock()
-    ), patch("app.worker.daemon._flush_publish_queue", new=AsyncMock()), patch(
-        "app.worker.daemon.cred_svc.load_credentials", return_value=FAKE_CREDS
-    ), patch("app.worker.daemon.draft_svc.get_draft") as get_draft:
+    with patch("app.worker.desktop_runtime.poll_worker_status", _idle_forever), patch(
+        "app.worker.desktop_runtime.worker_ws_loop", _idle_forever
+    ), patch("app.worker.desktop_runtime.bootstrap_environment", new=AsyncMock()), patch(
+        "app.worker.desktop_runtime.restart_worker_ws", new=AsyncMock()
+    ), patch("app.worker.desktop_runtime.flush_publish_queue", new=AsyncMock()), patch(
+        "app.worker.credentials.load_credentials", return_value=FAKE_CREDS
+    ), patch("app.worker.drafts.get_draft") as get_draft:
         get_draft.return_value = {
             "local_id": "draft_1",
             "workflow_id": "wf_1",
@@ -237,14 +237,14 @@ def test_daemon_publish_queues_offline(monkeypatch, tmp_path) -> None:
     def _offline(*_args, **_kwargs):
         raise httpx.ConnectError("offline")
 
-    monkeypatch.setattr("app.worker.daemon.cloud_post", _offline)
-    with patch("app.worker.daemon._poll_worker_status", _idle_forever), patch(
-        "app.worker.daemon._worker_ws_loop", _idle_forever
-    ), patch("app.worker.daemon._run_preflight", return_value=None), patch(
-        "app.worker.daemon._restart_worker_ws", new=AsyncMock()
-    ), patch("app.worker.daemon._flush_publish_queue", new=AsyncMock()), patch(
-        "app.worker.daemon.cred_svc.load_credentials", return_value=FAKE_CREDS
-    ), patch("app.worker.daemon.draft_svc.get_draft") as get_draft:
+    monkeypatch.setattr("app.worker.local_runs.cloud_post", _offline)
+    with patch("app.worker.desktop_runtime.poll_worker_status", _idle_forever), patch(
+        "app.worker.desktop_runtime.worker_ws_loop", _idle_forever
+    ), patch("app.worker.desktop_runtime.bootstrap_environment", new=AsyncMock()), patch(
+        "app.worker.desktop_runtime.restart_worker_ws", new=AsyncMock()
+    ), patch("app.worker.desktop_runtime.flush_publish_queue", new=AsyncMock()), patch(
+        "app.worker.credentials.load_credentials", return_value=FAKE_CREDS
+    ), patch("app.worker.drafts.get_draft") as get_draft:
         get_draft.return_value = {
             "local_id": "draft_off",
             "workflow_id": "wf_1",

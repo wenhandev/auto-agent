@@ -251,11 +251,46 @@ export interface RecordingOut {
   stopped_at?: string | null;
 }
 
+export interface RouteSkillProposalOut {
+  id: string;
+  source_type: string;
+  source_id: string;
+  org_id?: string | null;
+  domain: string;
+  capability: string;
+  url_pattern: string;
+  prompt: string;
+  status: "pending" | "adopted" | "dismissed" | "superseded";
+  adopted_route_skill_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface RecordingGenerateOut {
   recording_id: string;
   workflow_id: string;
   chat_session_id: string;
   workflow: Record<string, unknown>;
+  route_skill_proposals?: RouteSkillProposalOut[];
+  distill_mode?: string;
+}
+
+export interface RecordingDistillOut {
+  recording_id: string;
+  distill_mode: string;
+  segments: Array<{
+    domain: string;
+    url_pattern: string;
+    capability: string;
+    event_count: number;
+  }>;
+  workflow: Record<string, unknown>;
+  route_skill_proposals: RouteSkillProposalOut[];
+}
+
+export interface RouteSkillProposalAdoptOut {
+  proposal: RouteSkillProposalOut;
+  route_skill: RouteSkillOut;
 }
 
 export interface ApiKeyOut {
@@ -636,9 +671,9 @@ export interface LlmConfigOut {
 }
 
 export interface LlmEffectiveOut {
-  source: "db" | "env";
-  provider: string;
-  model: string;
+  source: "db" | "env" | "none";
+  provider: string | null;
+  model: string | null;
   api_key_masked: string;
   base_url: string | null;
 }
@@ -662,6 +697,11 @@ export interface AntibotSettingsOut {
   proxy_url_masked: string | null;
   proxy_username_configured: boolean;
   proxy_password_configured: boolean;
+}
+
+export interface RuntimeSettingsOut {
+  execution_backend: string;
+  worker_only: boolean;
 }
 
 export interface WSStartFrame {
@@ -928,6 +968,23 @@ export interface TestSelectorOut {
   };
 }
 
+export interface RouteSkillProposalAdoptPreviewOut {
+  proposal: RouteSkillProposalOut;
+  existing_route_skill?: RouteSkillOut | null;
+  merged_prompt: string;
+  will_create_new: boolean;
+}
+
+export interface RouteSkillBucketOut {
+  domain: string;
+  url_pattern: string;
+  capability: string;
+  route_skill_id?: string | null;
+  enabled: boolean;
+  pending_proposals: number;
+  prompt_preview: string;
+}
+
 export interface RouteSkillOut {
   id: string;
   scope: string;
@@ -936,6 +993,19 @@ export interface RouteSkillOut {
   allowed_tools: string[];
   priority: number;
   enabled: boolean;
+}
+
+export interface TaskDistillOut {
+  run_id: string;
+  distill_mode: string;
+  segments: Array<{
+    domain: string;
+    url_pattern: string;
+    capability: string;
+    event_count: number;
+  }>;
+  workflow: Record<string, unknown>;
+  route_skill_proposals: RouteSkillProposalOut[];
 }
 
 export interface TaskCreate {
@@ -949,6 +1019,7 @@ export interface TaskCreate {
   require_confirmation?: boolean;
   allowed_tools?: string[] | null;
   synthesize_workflow?: boolean;
+  execution_mode?: "cloud" | "worker";
 }
 
 export interface TaskResultOut {

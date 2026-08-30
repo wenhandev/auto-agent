@@ -26,4 +26,9 @@ mkdir -p "${DEST}"
 cp -a "${SRC}/." "${DEST}/"
 chmod +x "${DEST}/auto-agent-worker"
 
+
+cp "${DEST}/auto-agent-worker" "${DEST_ROOT}/auto-agent-runtime-${TRIPLE}"
+chmod +x "${DEST_ROOT}/auto-agent-runtime-${TRIPLE}"
+echo "Staged externalBin → ${DEST_ROOT}/auto-agent-runtime-${TRIPLE}"
+
 echo "Staged sidecar for ${TRIPLE} → ${DEST}"

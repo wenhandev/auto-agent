@@ -45,6 +45,7 @@ from app.services import run_inputs as run_input_svc
 from app.services import workflows as workflow_svc
 from app.services.autonomous_workflows import is_hidden_workflow
 from app.services import selector_cache as cache_svc
+from app.services.control_plane_policy import require_edge_execution
 
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
@@ -146,6 +147,7 @@ def create_workflow_for_org(
     *,
     created_by: str | None = None,
 ) -> WorkflowOut:
+    require_edge_execution("workflows.create")
     workflow = workflow_svc.create_workflow(
         name=body.name,
         session=session,
@@ -429,6 +431,7 @@ def link_workflow_credential(
     session: Session = Depends(get_session),
     ctx: AuthContext = Depends(get_org_context),
 ) -> CredentialListItem:
+    require_edge_execution("credentials")
     workflow = _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
     cred = session.get(Credential, body.credential_id)
     if cred is None:
@@ -464,6 +467,7 @@ def unlink_workflow_credential(
     session: Session = Depends(get_session),
     ctx: AuthContext = Depends(get_org_context),
 ) -> Response:
+    require_edge_execution("credentials")
     workflow = _workflow_for_org(session, workflow_id, ctx.org_id, ctx=ctx)
     link = session.exec(
         select(WorkflowCredential).where(

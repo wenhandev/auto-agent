@@ -57,7 +57,17 @@ def _ensure_autonomous_workflow(session: Session) -> tuple[str, str]:
     return wf.id, wf.current_version_id  # type: ignore[arg-type]
 
 
-def create_task(session: Session, spec: TaskSpec) -> Run:
+def create_task(
+    session: Session,
+    spec: TaskSpec,
+    *,
+    execution_mode: str | None = None,
+) -> Run:
+    from app.settings import settings
+
+    mode = execution_mode or (
+        "worker" if settings.execution_backend == "control_plane_only" else "cloud"
+    )
     wf_id, version_id = _ensure_autonomous_workflow(session)
     allowed_tools_json = (
         json.dumps(spec.allowed_tools, ensure_ascii=False)
@@ -91,13 +101,18 @@ def create_task(session: Session, spec: TaskSpec) -> Run:
         data_schema_json=data_schema_json,
         require_confirmation=spec.require_confirmation,
         allowed_tools_json=allowed_tools_json,
+        execution_mode=mode,
+        worker_pool="default" if mode == "worker" else None,
     )
     session.add(run)
     session.commit()
     session.refresh(run)
 
-    _task_queue.append(run.id)
-    run_svc._schedule(_ensure_task_loop)
+    if mode == "worker":
+        run_svc.schedule_worker_run(run.id, wf_id)
+    else:
+        _task_queue.append(run.id)
+        run_svc._schedule(_ensure_task_loop)
     return run
 
 
@@ -113,6 +128,10 @@ async def _task_dequeue_loop() -> None:
     try:
         while _task_queue:
             run_id = _task_queue.popleft()
+            with Session(engine) as session:
+                run = session.get(Run, run_id)
+                if run is not None and getattr(run, "execution_mode", "cloud") == "worker":
+                    continue
             try:
                 await _drive_autonomous_run(run_id)
             except Exception:
@@ -162,7 +181,7 @@ def _run_to_task_spec(run: Run) -> TaskSpec:
 async def _drive_autonomous_run(run_id: str) -> None:
     from app.services import artifact_context
     from app.services import artifacts as artifact_svc
-    from app.tools.browser import start_run_trace, stop_run_trace
+    from app.tools.browser import start_run_trace
 
     with Session(engine) as session:
         run = session.get(Run, run_id)
@@ -180,7 +199,6 @@ async def _drive_autonomous_run(run_id: str) -> None:
     from app.services.agent_loop_metrics import (
         AgentLoopMetrics,
         observe_event,
-        persist_metrics,
         reset_metrics,
         set_metrics,
     )
@@ -232,69 +250,23 @@ async def _drive_autonomous_run(run_id: str) -> None:
             items=[],
         )
         await emit({
-            "event": "run_failed",
-            "node_id": None,
-            "ts": _utcnow().isoformat(),
-            "error": user_msg,
-        })
-        await emit({
             "event": "task_finished",
             "success": False,
             "result": task_result.model_dump(),
             "ts": _utcnow().isoformat(),
         })
 
-    final_status = "completed"
-    stop_reason = "completed"
-    if task_result is not None and not task_result.success:
-        final_status = "failed" if task_result.reason not in ("aborted",) else "aborted"
-        stop_reason = task_result.reason or final_status
-    elif terminal_error:
-        final_status = "failed"
-        stop_reason = "error"
+    from app.services.turn_finalize import finalize_autonomous_run
 
-    metrics_summary = loop_metrics.finalize(stop_reason)
-    with Session(engine) as fin:
-        row = fin.get(Run, run_id)
-        if row is not None:
-            row.status = final_status
-            row.finished_at = _utcnow()
-            if task_result is not None:
-                row.result_json = json.dumps(
-                    task_result.model_dump(), ensure_ascii=False, default=str
-                )
-                if task_result.reason:
-                    stop_reason = task_result.reason
-            if final_status == "failed":
-                user_err = None
-                if task_result is not None:
-                    user_err = task_result.user_message or task_result.summary
-                row.error = user_err or terminal_error
-            metrics_summary = loop_metrics.finalize(stop_reason, row)
-            row.agent_loop_metrics_json = json.dumps(
-                metrics_summary, ensure_ascii=False, default=str
-            )
-            fin.add(row)
-            fin.commit()
-
-    await emit({
-        "event": "agent_loop_metrics",
-        "node_id": None,
-        "ts": _utcnow().isoformat(),
-        **metrics_summary,
-    })
-    persist_metrics(run_id, metrics_summary)
-
-    if task_result is not None:
-        await emit({
-            "event": "run_completed" if task_result.success else "run_failed",
-            "node_id": None,
-            "ts": _utcnow().isoformat(),
-            "output": task_result.model_dump(),
-        })
+    await finalize_autonomous_run(
+        run_id,
+        task_result,
+        terminal_error=terminal_error,
+        emit=emit,
+        metrics=loop_metrics,
+    )
 
     run_svc.clear_abort_event(run_id)
-    await stop_run_trace(run_id)
     artifact_context.clear_run_context()
     reset_metrics(metrics_token)
 

@@ -26,6 +26,7 @@ from app.schemas_api import (
     CredentialUpdate,
 )
 from app.services.credential_masking import mask_field
+from app.services.control_plane_policy import require_edge_execution
 
 
 router = APIRouter(prefix="/api/credentials", tags=["credentials"])
@@ -167,6 +168,7 @@ def create_credential_for_org(
     *,
     created_by: str | None = None,
 ) -> CredentialOut:
+    require_edge_execution("credentials")
     existing = session.exec(
         select(Credential).where(
             Credential.name == body.name,
@@ -231,6 +233,7 @@ def update_credential_for_org(
     session: Session,
     org_id: str,
 ) -> CredentialOut:
+    require_edge_execution("credentials")
     cred = session.get(Credential, credential_id)
     if cred is None:
         raise HTTPException(404, detail="credential not found")
@@ -278,6 +281,7 @@ def update_credential(
 def delete_credential_for_org(
     credential_id: str, session: Session, org_id: str
 ) -> dict:
+    require_edge_execution("credentials")
     cred = session.get(Credential, credential_id)
     if cred is None:
         raise HTTPException(404, detail="credential not found")

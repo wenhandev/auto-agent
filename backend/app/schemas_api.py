@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas import Edge, Node, Workflow
 
@@ -327,6 +327,68 @@ class RecordingGenerateOut(_ApiModel):
     workflow_id: str
     chat_session_id: str
     workflow: dict[str, Any]
+    route_skill_proposals: list["RouteSkillProposalOut"] = Field(default_factory=list)
+    distill_mode: str = "rule"
+
+
+RouteSkillProposalStatus = Literal["pending", "adopted", "dismissed", "superseded"]
+
+
+class RouteSkillProposalOut(_ApiModel):
+    id: str
+    source_type: str
+    source_id: str
+    org_id: Optional[str] = None
+    domain: str
+    capability: str
+    url_pattern: str
+    prompt: str
+    status: RouteSkillProposalStatus
+    adopted_route_skill_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class RouteSkillProposalAdoptOut(_ApiModel):
+    proposal: RouteSkillProposalOut
+    route_skill: RouteSkillOut
+
+
+class RecordingDistillIn(_ApiModel):
+    use_llm: bool = False
+
+
+class RecordingDistillOut(_ApiModel):
+    recording_id: str
+    distill_mode: str
+    segments: list[dict[str, Any]] = Field(default_factory=list)
+    workflow: dict[str, Any]
+    route_skill_proposals: list[RouteSkillProposalOut] = Field(default_factory=list)
+
+
+class TaskDistillOut(_ApiModel):
+    run_id: str
+    distill_mode: str
+    segments: list[dict[str, Any]] = Field(default_factory=list)
+    workflow: dict[str, Any]
+    route_skill_proposals: list[RouteSkillProposalOut] = Field(default_factory=list)
+
+
+class RouteSkillProposalAdoptPreviewOut(_ApiModel):
+    proposal: RouteSkillProposalOut
+    existing_route_skill: Optional[RouteSkillOut] = None
+    merged_prompt: str
+    will_create_new: bool
+
+
+class RouteSkillBucketOut(_ApiModel):
+    domain: str
+    url_pattern: str
+    capability: str
+    route_skill_id: Optional[str] = None
+    enabled: bool = False
+    pending_proposals: int = 0
+    prompt_preview: str = ""
 
 
 class RunCreate(_ApiModel):
@@ -505,8 +567,20 @@ class WorkerEnvironmentCheckOut(_ApiModel):
 
 
 class WorkerLoginRequest(_ApiModel):
-    email: str = Field(min_length=3)
-    password: str = Field(min_length=1)
+    email: Optional[str] = Field(default=None, min_length=3)
+    password: Optional[str] = Field(default=None, min_length=1)
+    session_token: Optional[str] = Field(default=None, min_length=8)
+    machine_id: str = Field(min_length=8)
+    display_name: Optional[str] = None
+    hostname: Optional[str] = None
+    tags: list[str] = Field(default_factory=lambda: ["default"])
+    agent_version: Optional[str] = None
+    environment: Optional[dict[str, Any]] = None
+
+
+class WorkerOAuthLoginRequest(_ApiModel):
+    session_token: Optional[str] = Field(default=None, min_length=8)
+    oauth_exchange_code: Optional[str] = Field(default=None, min_length=8)
     machine_id: str = Field(min_length=8)
     display_name: Optional[str] = None
     hostname: Optional[str] = None
@@ -558,6 +632,11 @@ class OrgSettingsOut(_ApiModel):
     desktop_client_policy: Literal["disabled", "approval_required", "open"] = (
         "approval_required"
     )
+
+
+class RuntimeSettingsOut(_ApiModel):
+    execution_backend: str
+    worker_only: bool
 
 
 class OrgSettingsUpdate(_ApiModel):
@@ -648,7 +727,7 @@ class WorkflowCredentialLinkRequest(_ApiModel):
 
 class LlmConfigUpsert(_ApiModel):
     provider: str
-    model: str
+    model: str = Field(min_length=1)
     api_key: str
     base_url: Optional[str] = None
     self_healing_enabled: Optional[bool] = None
@@ -656,6 +735,14 @@ class LlmConfigUpsert(_ApiModel):
         default=None, ge=0.0, le=1.0
     )
     selector_cache_enabled: Optional[bool] = None
+
+    @field_validator("model")
+    @classmethod
+    def model_must_not_be_email(cls, value: str) -> str:
+        trimmed = value.strip()
+        if "@" in trimmed and "." in trimmed.split("@", 1)[-1]:
+            raise ValueError("model must be a model id, not an email address")
+        return trimmed
 
 
 class LlmConfigOut(_ApiModel):
@@ -694,11 +781,11 @@ class SelectorCacheStatsOut(_ApiModel):
 
 
 class LlmEffectiveOut(_ApiModel):
-    source: Literal["db", "env"]
-    provider: str
-    model: str
-    api_key_masked: str
-    base_url: Optional[str]
+    source: Literal["db", "env", "none"]
+    provider: Optional[str] = None
+    model: Optional[str] = None
+    api_key_masked: str = ""
+    base_url: Optional[str] = None
 
 
 class WSStartFrame(_ApiModel):
@@ -782,6 +869,7 @@ class TaskCreate(_ApiModel):
     require_confirmation: bool = False
     allowed_tools: Optional[list[str]] = None
     synthesize_workflow: bool = False
+    execution_mode: Optional[Literal["cloud", "worker"]] = None
 
 
 class TaskResultOut(_ApiModel):
@@ -870,8 +958,10 @@ __all__ = [
     "RunReplayResponse",
     "WorkerEnvironmentCheckOut",
     "WorkerLoginRequest",
+    "WorkerOAuthLoginRequest",
     "WorkerLoginResponse",
     "WorkerOut",
+    "RuntimeSettingsOut",
     "RunStatus",
     "CredentialCreate",
     "CredentialUpdate",

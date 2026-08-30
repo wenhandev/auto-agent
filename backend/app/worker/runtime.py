@@ -114,6 +114,9 @@ class WorkerRuntime:
         run_id = str(frame.get("run_id") or "")
         if not run_id:
             return
+        if frame.get("mode") == "autonomous":
+            await self._handle_autonomous_execute(run_id, frame)
+            return
         workflow_raw = frame.get("workflow")
         if not isinstance(workflow_raw, dict):
             return
@@ -193,6 +196,82 @@ class WorkerRuntime:
                     "ts": _iso_now(),
                     "error": "worker execution crashed",
                 },
+            )
+        finally:
+            await self._stop_stream(run_id)
+            self._active.pop(run_id, None)
+            self._resume_events.pop(run_id, None)
+            self._active_count = max(0, self._active_count - 1)
+            if self._current_run_id == run_id:
+                self._current_run_id = None
+
+    async def _handle_autonomous_execute(
+        self, run_id: str, frame: dict[str, Any]
+    ) -> None:
+        from app.agents.autonomous import run_task as run_autonomous_task
+        from app.schemas_tasks import TaskResult, TaskSpec
+        from app.services import artifact_context
+        from app.services import artifacts as artifact_svc
+        from app.services.turn_finalize import finalize_autonomous_run
+        from app.tools.browser import start_run_trace
+
+        spec = TaskSpec(
+            objective=str(frame.get("objective") or ""),
+            start_url=frame.get("start_url"),
+            max_steps=int(frame.get("max_steps") or 30),
+            max_seconds=int(frame.get("max_seconds") or 300),
+            success_criteria=frame.get("success_criteria"),
+            allowed_domains=frame.get("allowed_domains"),
+            data_schema=frame.get("data_schema"),
+            require_confirmation=bool(frame.get("require_confirmation")),
+            allowed_tools=frame.get("allowed_tools"),
+        )
+        abort_event = asyncio.Event()
+        self._active[run_id] = abort_event
+        self._resume_events[run_id] = asyncio.Event()
+        self._active_count += 1
+        self._current_run_id = run_id
+        seq_counter = {"n": 0}
+
+        artifact_context.set_run_context(run_id)
+        await start_run_trace(run_id)
+
+        async def emit(payload: dict) -> None:
+            seq = seq_counter["n"]
+            seq_counter["n"] += 1
+            artifact_context.set_run_context(
+                run_id,
+                node_id=payload.get("node_id"),
+                step_index=payload.get("step_index"),
+            )
+            enriched_payload = await artifact_svc.enrich_event_payload(run_id, payload)
+            enriched = {**enriched_payload, "run_id": run_id, "seq": seq}
+            await self._emit_run_event(run_id, enriched)
+
+        task_result: Optional[TaskResult] = None
+        terminal_error: Optional[str] = None
+        try:
+            try:
+                task_result = await run_autonomous_task(
+                    spec, emit, abort_event=abort_event
+                )
+            except Exception:
+                logger.exception("worker autonomous execute failed run=%s", run_id)
+                terminal_error = "autonomous task crashed on worker"
+                task_result = TaskResult(
+                    success=False,
+                    summary=terminal_error,
+                    user_message=terminal_error,
+                    reason="error",
+                    steps_taken=0,
+                    items=[],
+                )
+            await finalize_autonomous_run(
+                run_id,
+                task_result,
+                terminal_error=terminal_error,
+                emit=emit,
+                metrics=None,
             )
         finally:
             await self._stop_stream(run_id)

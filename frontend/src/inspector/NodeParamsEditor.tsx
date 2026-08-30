@@ -55,6 +55,30 @@ const PARAM_FIELDS: Partial<Record<NodeType, ParamField[]>> = {
       multiline: true,
     },
   ],
+  desktop_open: [{ key: "app", labelKey: "app", kind: "string" }],
+  desktop_act: [
+    { key: "app", labelKey: "app", kind: "string" },
+    {
+      key: "instruction",
+      labelKey: "instruction",
+      kind: "string",
+      multiline: true,
+    },
+  ],
+  desktop_navigate: [
+    { key: "app", labelKey: "app", kind: "string" },
+    { key: "goal", labelKey: "goal", kind: "string", multiline: true },
+    { key: "max_steps", labelKey: "maxSteps", kind: "number" },
+  ],
+  desktop_extract: [
+    { key: "app", labelKey: "app", kind: "string" },
+    {
+      key: "instruction",
+      labelKey: "instruction",
+      kind: "string",
+      multiline: true,
+    },
+  ],
   condition: [],
   filter: [
     { key: "predicate", labelKey: "predicate", kind: "string", multiline: true },

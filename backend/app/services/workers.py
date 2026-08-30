@@ -31,6 +31,21 @@ def default_hostname() -> str:
         return "unknown"
 
 
+_GENERIC_CLIENT_LABELS = frozenset(
+    {"localhost", "127.0.0.1", "unknown", "desktop", "my device"}
+)
+
+
+def normalize_client_label(label: Optional[str]) -> Optional[str]:
+    """Drop generic hostnames so worker display names stay human-readable."""
+    if not label:
+        return None
+    trimmed = label.strip()
+    if not trimmed or trimmed.lower() in _GENERIC_CLIENT_LABELS:
+        return None
+    return trimmed
+
+
 def effective_approval_status(worker: Worker) -> ApprovalStatus:
     """Backward compat: legacy rows without explicit status are treated as approved."""
     raw = worker.approval_status or "approved"
@@ -175,7 +190,10 @@ def upsert_worker(
     ).first()
     is_new = row is None
     tags_json = json.dumps(tags or ["default"], ensure_ascii=False)
-    host = hostname or default_hostname()
+    host = normalize_client_label(hostname) or normalize_client_label(
+        default_hostname()
+    ) or "desktop"
+    display = normalize_client_label(display_name)
     env_status = "unknown"
     env_checks_json: Optional[str] = None
     caps_json: Optional[str] = None
@@ -191,7 +209,7 @@ def upsert_worker(
     if row is None:
         row = Worker(
             machine_id=machine_id,
-            display_name=display_name or host,
+            display_name=display or host,
             hostname=host,
             org_id=org_id,
             user_id=user_id,
@@ -202,7 +220,10 @@ def upsert_worker(
             capabilities_json=caps_json,
         )
     else:
-        row.display_name = display_name or row.display_name or host
+        if display:
+            row.display_name = display
+        elif not normalize_client_label(row.display_name):
+            row.display_name = host
         row.hostname = host
         row.tags_json = tags_json
         if agent_version:
@@ -284,6 +305,8 @@ def update_worker_environment(
     session: Session,
     worker_id: str,
     environment: dict[str, Any],
+    *,
+    agent_version: str | None = None,
 ) -> None:
     row = session.get(Worker, worker_id)
     if row is None:
@@ -295,6 +318,10 @@ def update_worker_environment(
     caps = environment.get("capabilities")
     if isinstance(caps, dict):
         row.capabilities_json = json.dumps(caps, ensure_ascii=False, default=str)
+    if agent_version:
+        row.agent_version = agent_version
+    elif isinstance(caps, dict) and caps.get("agent_version"):
+        row.agent_version = str(caps["agent_version"])
     row.last_seen_at = _utcnow()
     session.add(row)
     session.commit()

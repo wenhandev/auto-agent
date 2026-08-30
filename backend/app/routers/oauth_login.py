@@ -38,14 +38,23 @@ class OAuthExchangeRequest(BaseModel):
     code: str = Field(min_length=1)
 
 
-def _oauth_frontend_callback_url(*, error: str | None = None, code: str | None = None) -> str:
+def _oauth_frontend_callback_url(
+    *,
+    error: str | None = None,
+    code: str | None = None,
+    client_type: str | None = None,
+) -> str:
     params: dict[str, str] = {}
     if error:
         params["error"] = error
     if code:
         params["code"] = code
     query = f"?{urlencode(params)}" if params else ""
-    return f"{settings.frontend_base_url.rstrip('/')}/login/oauth/callback{query}"
+    if client_type == "desktop":
+        base = settings.desktop_client_base_url.rstrip("/")
+    else:
+        base = settings.frontend_base_url.rstrip("/")
+    return f"{base}/login/oauth/callback{query}"
 
 
 def _require_provider(provider: str) -> None:
@@ -59,6 +68,17 @@ def _oauth_cookie_secure() -> bool:
     return settings.frontend_base_url.lower().startswith("https://")
 
 
+def _client_type_from_request(request: Request) -> str | None:
+    cookie_value = request.cookies.get(OAUTH_STATE_COOKIE)
+    if not cookie_value:
+        return None
+    stored = unpack_oauth_state_cookie(cookie_value, secret=settings.session_secret)
+    if stored is None:
+        return None
+    client_type = stored.get("client_type")
+    return client_type if client_type in ("desktop",) else None
+
+
 @router.get("/providers")
 def list_oauth_providers() -> dict[str, object]:
     return {
@@ -68,8 +88,9 @@ def list_oauth_providers() -> dict[str, object]:
 
 
 @router.get("/{provider}/start")
-def oauth_start(provider: str) -> RedirectResponse:
+def oauth_start(provider: str, client: str | None = None) -> RedirectResponse:
     _require_provider(provider)
+    client_type = client if client in ("desktop",) else None
     state = generate_state_token()
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
@@ -85,6 +106,7 @@ def oauth_start(provider: str) -> RedirectResponse:
         provider=provider,
         state=state,
         code_verifier=code_verifier,
+        client_type=client_type,
     )
     response.set_cookie(
         key=OAUTH_STATE_COOKIE,
@@ -107,30 +129,32 @@ async def oauth_callback(
     error: str | None = None,
     session: Session = Depends(get_session),
 ) -> RedirectResponse:
+    client_type = _client_type_from_request(request)
     if provider not in oauth_providers.SUPPORTED_PROVIDERS:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown provider")
     if error:
         return RedirectResponse(
-            url=_oauth_frontend_callback_url(error=error),
+            url=_oauth_frontend_callback_url(error=error, client_type=client_type),
             status_code=status.HTTP_302_FOUND,
         )
     if not code or not state:
         return RedirectResponse(
-            url=_oauth_frontend_callback_url(error="oauth_failed"),
+            url=_oauth_frontend_callback_url(error="oauth_failed", client_type=client_type),
             status_code=status.HTTP_302_FOUND,
         )
     cookie_value = request.cookies.get(OAUTH_STATE_COOKIE)
     if not cookie_value:
         return RedirectResponse(
-            url=_oauth_frontend_callback_url(error="oauth_failed"),
+            url=_oauth_frontend_callback_url(error="oauth_failed", client_type=client_type),
             status_code=status.HTTP_302_FOUND,
         )
     stored = unpack_oauth_state_cookie(cookie_value, secret=settings.session_secret)
     if stored is None or stored["provider"] != provider or stored["state"] != state:
         return RedirectResponse(
-            url=_oauth_frontend_callback_url(error="oauth_failed"),
+            url=_oauth_frontend_callback_url(error="oauth_failed", client_type=client_type),
             status_code=status.HTTP_302_FOUND,
         )
+    client_type = stored.get("client_type")
     try:
         tokens = await oauth_providers.exchange_code_for_tokens(
             provider=provider,
@@ -156,16 +180,16 @@ async def oauth_callback(
     except HTTPException as exc:
         detail = exc.detail if isinstance(exc.detail, str) else "oauth_failed"
         return RedirectResponse(
-            url=_oauth_frontend_callback_url(error=detail),
+            url=_oauth_frontend_callback_url(error=detail, client_type=client_type),
             status_code=status.HTTP_302_FOUND,
         )
     except Exception:
         return RedirectResponse(
-            url=_oauth_frontend_callback_url(error="oauth_failed"),
+            url=_oauth_frontend_callback_url(error="oauth_failed", client_type=client_type),
             status_code=status.HTTP_302_FOUND,
         )
     response = RedirectResponse(
-        url=_oauth_frontend_callback_url(code=exchange_code),
+        url=_oauth_frontend_callback_url(code=exchange_code, client_type=client_type),
         status_code=status.HTTP_302_FOUND,
     )
     response.delete_cookie(key=OAUTH_STATE_COOKIE, path="/api/auth/oauth")

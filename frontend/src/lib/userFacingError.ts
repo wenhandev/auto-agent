@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import type { RunEventOut } from "@/types-platform";
 
 const TECHNICAL_MARKERS = [
@@ -36,30 +37,10 @@ function eventName(ev: RunEventOut): string {
   return ev.event_type || String(ev.payload?.event ?? "");
 }
 
-function objectiveLanguage(objective?: string | null): "zh" | "en" {
-  return objective && /[\u4e00-\u9fff]/.test(objective) ? "zh" : "en";
-}
-
-function reasonCodeMessage(reason: string, lang: "zh" | "en"): string {
-  const zh: Record<string, string> = {
-    no_progress: "智能体在页面上停滞不前，无法继续完成任务。",
-    time_budget_exhausted: "任务超时，未能完成目标。",
-    step_budget_exhausted: "任务步数用尽，未能完成目标。",
-    error: "浏览器操作出错，任务未能完成。",
-    guardrail: "任务因安全或导航限制被阻止。",
-    schema_validation_failed: "收集到的数据不符合要求的格式。",
-    aborted: "任务已取消。",
-  };
-  const en: Record<string, string> = {
-    no_progress: "The agent stopped making progress and could not continue.",
-    time_budget_exhausted: "The task ran out of time before completing.",
-    step_budget_exhausted: "The task used all allowed steps before completing.",
-    error: "The task could not be completed due to a browser error.",
-    guardrail: "The task was blocked by a safety or navigation rule.",
-    schema_validation_failed: "Collected data did not match the required format.",
-    aborted: "The task was cancelled.",
-  };
-  return (lang === "zh" ? zh : en)[reason] ?? (lang === "zh" ? "任务未能完成。" : "The task could not be completed.");
+function reasonCodeMessage(reason: string): string {
+  const key = `taskFailure.reasons.${reason}`;
+  const translated = i18n.t(key);
+  return translated !== key ? translated : i18n.t("taskFailure.generic");
 }
 
 export function extractFailureFromEvents(
@@ -95,7 +76,8 @@ export function extractFailureFromEvents(
 
   for (let i = events.length - 1; i >= 0; i -= 1) {
     const ev = events[i];
-    if (eventName(ev) !== "vision_step") continue;
+    const name = eventName(ev);
+    if (name !== "vision_step" && name !== "desktop_step") continue;
     const result = ev.payload?.result;
     if (!result || typeof result !== "object") continue;
     const err = String((result as Record<string, unknown>).error ?? "").trim();
@@ -119,11 +101,10 @@ export function userFacingFailureMessage(input: {
     summary,
     reason,
     error,
-    objective,
+    objective: _objective,
     events,
     fallbackGeneric = false,
   } = input;
-  const lang = objectiveLanguage(objective);
 
   if (userMessage?.trim()) return userMessage.trim();
   if (summary?.trim() && !isTechnicalError(summary)) return summary.trim();
@@ -133,18 +114,18 @@ export function userFacingFailureMessage(input: {
   if (error?.trim() && !isTechnicalError(error)) return error.trim();
 
   if (events?.length) {
-    const fromEvents = extractFailureFromEvents(events, objective, {
+    const fromEvents = extractFailureFromEvents(events, _objective, {
       terminalOnly: true,
     });
     if (fromEvents) return fromEvents;
   }
 
   if (reason && isReasonCode(reason)) {
-    return reasonCodeMessage(reason, lang);
+    return reasonCodeMessage(reason);
   }
 
   if (fallbackGeneric) {
-    return lang === "zh" ? "任务未能完成。" : "The task could not be completed.";
+    return i18n.t("taskFailure.generic");
   }
 
   return null;

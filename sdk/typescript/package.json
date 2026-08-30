@@ -2,6 +2,7 @@
   "name": "auto-agent-sdk",
   "version": "0.1.0",
   "description": "TypeScript client for the auto-agent /api/v1 public API.",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

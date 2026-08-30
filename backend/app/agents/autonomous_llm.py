@@ -256,6 +256,60 @@ def _build_tools(
         )
         return {"status": "planned"}
 
+    async def list_apps() -> dict[str, Any]:
+        _capture_action("list_apps", {})
+        return {"status": "planned"}
+
+    async def open_app(app: str) -> dict[str, Any]:
+        _capture_action("open_app", {"app": app})
+        return {"status": "planned"}
+
+    async def get_app_state(app: str) -> dict[str, Any]:
+        _capture_action("get_app_state", {"app": app})
+        return {"status": "planned"}
+
+    async def desktop_click(
+        app: str,
+        index: Optional[int] = None,
+        x: Optional[float] = None,
+        y: Optional[float] = None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"app": app}
+        if index is not None:
+            args["index"] = index
+        if x is not None:
+            args["x"] = x
+        if y is not None:
+            args["y"] = y
+        _capture_action("desktop_click", args)
+        return {"status": "planned"}
+
+    async def desktop_type(
+        app: str,
+        text: str,
+        index: Optional[int] = None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"app": app, "text": text}
+        if index is not None:
+            args["index"] = index
+        _capture_action("desktop_type", args)
+        return {"status": "planned"}
+
+    async def desktop_key(app: str, key: str) -> dict[str, Any]:
+        _capture_action("desktop_key", {"app": app, "key": key})
+        return {"status": "planned"}
+
+    async def desktop_scroll(
+        app: str,
+        direction: str,
+        amount: int = 3,
+    ) -> dict[str, Any]:
+        _capture_action(
+            "desktop_scroll",
+            {"app": app, "direction": direction, "amount": amount},
+        )
+        return {"status": "planned"}
+
     builders: dict[str, Any] = {
         "finish": finish,
         "navigate": navigate,
@@ -268,6 +322,13 @@ def _build_tools(
         "extract": extract,
         "http_request": http_request,
         "integration": integration,
+        "list_apps": list_apps,
+        "open_app": open_app,
+        "get_app_state": get_app_state,
+        "desktop_click": desktop_click,
+        "desktop_type": desktop_type,
+        "desktop_key": desktop_key,
+        "desktop_scroll": desktop_scroll,
     }
 
     for name in sorted(allowed_tools):

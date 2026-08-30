@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -90,6 +91,8 @@ class LivestreamSession:
         self._lock = asyncio.Lock()
         self._ended = False
         self._retry_task: Optional[asyncio.Task] = None
+        self.holder: str = "agent"
+        self._device: tuple[int, int] = (0, 0)
 
     @property
     def viewer_count(self) -> int:
@@ -248,12 +251,16 @@ class LivestreamSession:
                 pass
 
         metadata = params.get("metadata") or {}
+        width = int(metadata.get("deviceWidth", 0) or 0)
+        height = int(metadata.get("deviceHeight", 0) or 0)
+        if width and height:
+            self._device = (width, height)
         self._seq += 1
         frame = {
             "ts": _utcnow_iso(),
             "seq": self._seq,
-            "width": metadata.get("deviceWidth", 0),
-            "height": metadata.get("deviceHeight", 0),
+            "width": width,
+            "height": height,
             "data": params.get("data", ""),
         }
         await self._fanout_frame(frame)
@@ -293,6 +300,91 @@ class LivestreamSession:
             self._cdp = None
         self._screencast_active = False
         logger.debug("livestream screencast stopped run=%s", self.run_id)
+
+    async def notify_control(self) -> None:
+        await self._notify_viewers(
+            {"type": "control", "holder": self.holder, "ts": _utcnow_iso()}
+        )
+
+    async def set_control(self, holder: str) -> None:
+        next_holder = "user" if holder == "user" else "agent"
+        if self.holder == next_holder:
+            await self.notify_control()
+            return
+        self.holder = next_holder
+        await self.notify_control()
+
+    async def handle_viewer_message(self, raw: str) -> None:
+        try:
+            msg = json.loads(raw)
+        except (TypeError, ValueError):
+            return
+        if not isinstance(msg, dict):
+            return
+        kind = str(msg.get("type") or "")
+        if kind == "set_control":
+            await self.set_control(str(msg.get("holder") or "agent"))
+            return
+        if kind in {"input", "mouse", "key", "wheel"}:
+            await self.dispatch_input(msg)
+
+    async def dispatch_input(self, event: dict[str, Any]) -> None:
+        if self.holder != "user" or self._cdp is None:
+            return
+        width, height = self._device
+        kind = str(event.get("kind") or event.get("type") or "")
+        x = float(event.get("x") or 0) * (width or 1280)
+        y = float(event.get("y") or 0) * (height or 900)
+        modifiers = int(event.get("modifiers") or 0)
+        try:
+            if kind == "mouse":
+                phase = str(event.get("event") or "moved")
+                cdp_type = {
+                    "pressed": "mousePressed",
+                    "released": "mouseReleased",
+                    "moved": "mouseMoved",
+                }.get(phase)
+                if cdp_type is None:
+                    return
+                button = str(event.get("button") or "left")
+                await self._cdp.send(
+                    "Input.dispatchMouseEvent",
+                    {
+                        "type": cdp_type,
+                        "x": x,
+                        "y": y,
+                        "button": button if phase != "moved" else "none",
+                        "buttons": 1 if phase == "pressed" else 0,
+                        "clickCount": int(event.get("clicks") or 1)
+                        if phase != "moved"
+                        else 0,
+                        "modifiers": modifiers,
+                    },
+                )
+            elif kind == "wheel":
+                await self._cdp.send(
+                    "Input.dispatchMouseEvent",
+                    {
+                        "type": "mouseWheel",
+                        "x": x,
+                        "y": y,
+                        "deltaX": float(event.get("dx") or 0),
+                        "deltaY": float(event.get("dy") or 0),
+                        "modifiers": modifiers,
+                    },
+                )
+            elif kind == "key":
+                phase = str(event.get("event") or "down")
+                cdp_type = "keyDown" if phase == "down" else "keyUp"
+                key = str(event.get("key") or "")
+                if not key:
+                    return
+                await self._cdp.send(
+                    "Input.dispatchKeyEvent",
+                    {"type": cdp_type, "key": key, "modifiers": modifiers},
+                )
+        except Exception:
+            logger.debug("livestream input dispatch failed run=%s", self.run_id, exc_info=True)
 
     async def notify_run_ended(self) -> None:
         async with self._lock:
@@ -340,9 +432,11 @@ class LivestreamHub:
 
         session = await self._get_or_create_session(run_id)
         await session.add_viewer(ws)
+        await session.notify_control()
         try:
             while True:
-                await ws.receive_text()
+                raw = await ws.receive_text()
+                await session.handle_viewer_message(raw)
         except WebSocketDisconnect:
             pass
         except Exception:
@@ -383,13 +477,28 @@ handle_connection = hub.handle_connection
 on_run_ended = hub.on_run_ended
 ingest_frame = hub.ingest_frame
 
+
+def user_has_control(run_id: Optional[str]) -> bool:
+    if not run_id:
+        return False
+    session = hub.get_session(run_id)
+    return session is not None and session.holder == "user"
+
+
+USER_HAS_CONTROL = (
+    "the user has taken control of this browser window — they are driving it "
+    "directly. Wait, or ask them to Give control back in the live preview."
+)
+
 __all__ = [
     "LivestreamHub",
     "LivestreamSession",
     "STREAM_CLOSE_NOT_RUNNING",
+    "USER_HAS_CONTROL",
     "get_run_status",
     "handle_connection",
     "hub",
     "ingest_frame",
     "on_run_ended",
+    "user_has_control",
 ]

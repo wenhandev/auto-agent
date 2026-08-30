@@ -19,7 +19,9 @@ import { OrgMembersPage } from "./pages/OrgMembersPage";
 import { WorkflowDetailPage } from "./pages/WorkflowDetailPage";
 import { WorkflowsListPage } from "./pages/WorkflowsListPage";
 import { ClientDownloadPage } from "./pages/ClientDownloadPage";
+import { DesktopOnlyFeaturePage } from "./pages/DesktopOnlyFeaturePage";
 import { AdminConsolePage } from "./pages/admin/AdminConsolePage";
+import { webPlatformPolicy } from "./lib/webPlatformPolicy";
 
 export function App() {
   return (
@@ -40,26 +42,68 @@ export function App() {
             path={ROUTES.workflowDetail}
             element={<WorkflowDetailPage />}
           />
-          <Route path={ROUTES.credentials} element={<CredentialsListPage />} />
+          <Route
+            path={ROUTES.credentials}
+            element={
+              webPlatformPolicy.showCloudCredentials ? (
+                <CredentialsListPage />
+              ) : (
+                <DesktopOnlyFeaturePage featureKey="credentials" />
+              )
+            }
+          />
           <Route
             path={ROUTES.credentialsOAuthCallback}
-            element={<OAuthCallbackPage />}
+            element={
+              webPlatformPolicy.showCloudCredentials ? (
+                <OAuthCallbackPage />
+              ) : (
+                <DesktopOnlyFeaturePage featureKey="credentials" />
+              )
+            }
           />
           <Route path={ROUTES.runs} element={<RunHistoryListPage />} />
           <Route path={ROUTES.runReplay} element={<RunReplayPage />} />
           <Route path={ROUTES.tasks} element={<AutonomousTaskPage />} />
           <Route
             path={ROUTES.browserSessions}
-            element={<BrowserSessionsPage />}
+            element={
+              webPlatformPolicy.showBrowserSessions ? (
+                <BrowserSessionsPage />
+              ) : (
+                <DesktopOnlyFeaturePage featureKey="browserSessions" />
+              )
+            }
           />
           <Route
             path={ROUTES.browserProfiles}
-            element={<BrowserProfilesPage />}
+            element={
+              webPlatformPolicy.showBrowserProfiles ? (
+                <BrowserProfilesPage />
+              ) : (
+                <DesktopOnlyFeaturePage featureKey="browserProfiles" />
+              )
+            }
           />
-          <Route path={ROUTES.recordings} element={<RecordingsListPage />} />
+          <Route
+            path={ROUTES.recordings}
+            element={
+              webPlatformPolicy.showRecordings ? (
+                <RecordingsListPage />
+              ) : (
+                <DesktopOnlyFeaturePage featureKey="recordings" />
+              )
+            }
+          />
           <Route
             path={ROUTES.recordingDetail}
-            element={<RecordingDetailPage />}
+            element={
+              webPlatformPolicy.showRecordings ? (
+                <RecordingDetailPage />
+              ) : (
+                <DesktopOnlyFeaturePage featureKey="recordings" />
+              )
+            }
           />
           <Route path={ROUTES.settings} element={<SettingsPage />} />
           <Route path={ROUTES.members} element={<OrgMembersPage />} />

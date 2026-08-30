@@ -7,13 +7,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { workerLogin, fetchWorkerMe, clearSidecarSession, syncSidecarSession } from "./api";
+import { workerLogin, fetchWorkerMe, clearSidecarSession, scheduleSidecarSync, workerLoginOAuth } from "./api";
 import { configureCloudApi } from "./cloudApi";
 import {
   clearSession,
   loadSession,
   saveSession,
   updateApprovalStatus,
+  isGenericDisplayName,
+  migrateSession,
 } from "./session";
 import type { DesktopSession } from "./types";
 
@@ -24,6 +26,12 @@ interface DesktopAuthContextValue {
     cloudUrl: string;
     email: string;
     password: string;
+    displayName?: string;
+    tags?: string[];
+  }) => Promise<void>;
+  loginOAuth: (params: {
+    cloudUrl: string;
+    oauthExchangeCode: string;
     displayName?: string;
     tags?: string[];
   }) => Promise<void>;
@@ -40,13 +48,45 @@ export function DesktopAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const saved = loadSession();
-    setSession(saved);
-    configureCloudApi(saved);
-    if (saved) {
-      void syncSidecarSession(saved).catch(() => {
-        // runtime may not be ready yet; RuntimeGate handles startup
-      });
+    if (!saved) {
+      setIsLoading(false);
+      return;
     }
+    const migrated = migrateSession(saved);
+    if (
+      migrated.cloudUrl !== saved.cloudUrl ||
+      migrated.displayName !== saved.displayName
+    ) {
+      saveSession(migrated);
+    }
+    setSession(migrated);
+    configureCloudApi(migrated);
+    scheduleSidecarSync(migrated);
+    void fetchWorkerMe(migrated)
+      .then((me) => {
+        const displayName = me.display_name?.trim();
+        const resolvedDisplay =
+          displayName && !isGenericDisplayName(displayName)
+            ? displayName
+            : migrated.displayName;
+        const next: DesktopSession = {
+          ...migrated,
+          approvalStatus: me.approval_status,
+          displayName: resolvedDisplay,
+          tags: me.tags?.length ? me.tags : migrated.tags,
+        };
+        if (
+          next.approvalStatus !== migrated.approvalStatus ||
+          next.displayName !== migrated.displayName ||
+          next.tags.join(",") !== migrated.tags.join(",")
+        ) {
+          saveSession(next);
+          setSession(next);
+        }
+      })
+      .catch(() => {
+        // keep cached session when offline
+      });
     setIsLoading(false);
   }, []);
 
@@ -59,6 +99,21 @@ export function DesktopAuthProvider({ children }: { children: ReactNode }) {
       tags?: string[];
     }) => {
       const next = await workerLogin(params);
+      saveSession(next);
+      configureCloudApi(next);
+      setSession(next);
+    },
+    [],
+  );
+
+  const loginOAuth = useCallback(
+    async (params: {
+      cloudUrl: string;
+      oauthExchangeCode: string;
+      displayName?: string;
+      tags?: string[];
+    }) => {
+      const next = await workerLoginOAuth(params);
       saveSession(next);
       configureCloudApi(next);
       setSession(next);
@@ -103,11 +158,12 @@ export function DesktopAuthProvider({ children }: { children: ReactNode }) {
       session,
       isLoading,
       login,
+      loginOAuth,
       logout,
       refreshApproval,
       updateProfile,
     }),
-    [session, isLoading, login, logout, refreshApproval, updateProfile],
+    [session, isLoading, login, loginOAuth, logout, refreshApproval, updateProfile],
   );
 
   return (

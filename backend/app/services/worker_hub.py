@@ -150,7 +150,16 @@ async def register_connection(
     with Session(engine) as session:
         worker_svc.set_worker_status(session, worker_id, "online")
         if environment:
-            worker_svc.update_worker_environment(session, worker_id, environment)
+            agent_version = None
+            caps = environment.get("capabilities")
+            if isinstance(caps, dict):
+                agent_version = caps.get("agent_version")
+            worker_svc.update_worker_environment(
+                session,
+                worker_id,
+                environment,
+                agent_version=str(agent_version) if agent_version else None,
+            )
     from app.services import runs as run_svc
 
     run_svc.wakeup_dispatcher()
@@ -192,7 +201,15 @@ async def handle_heartbeat(worker_id: str, payload: dict[str, Any]) -> None:
         from app.services import workers as worker_svc
 
         with Session(engine) as session:
-            worker_svc.update_worker_environment(session, worker_id, env)
+            agent_version = None
+            if isinstance(env.get("capabilities"), dict):
+                agent_version = env["capabilities"].get("agent_version")
+            worker_svc.update_worker_environment(
+                session,
+                worker_id,
+                env,
+                agent_version=str(agent_version) if agent_version else None,
+            )
             worker_row = session.get(Worker, worker_id)
             if worker_row is not None:
                 conn.approval_status = worker_svc.effective_approval_status(worker_row)
@@ -307,6 +324,31 @@ def _build_execute_payload(run_id: str) -> Optional[dict[str, Any]]:
         run.worker_assigned_at = _utcnow()
         session.add(run)
         session.commit()
+        if run.mode == "autonomous":
+            allowed_domains = None
+            if run.allowed_domains_json:
+                allowed_domains = json.loads(run.allowed_domains_json)
+            data_schema = None
+            if run.data_schema_json:
+                data_schema = json.loads(run.data_schema_json)
+            allowed_tools = None
+            if run.allowed_tools_json:
+                allowed_tools = json.loads(run.allowed_tools_json)
+            return {
+                "type": "execute_run",
+                "run_id": run_id,
+                "mode": "autonomous",
+                "workflow_id": run.workflow_id,
+                "objective": run.objective or "",
+                "start_url": run.start_url,
+                "max_steps": run.max_steps or 30,
+                "max_seconds": run.max_seconds or 300,
+                "success_criteria": run.success_criteria,
+                "allowed_domains": allowed_domains,
+                "data_schema": data_schema,
+                "allowed_tools": allowed_tools,
+                "require_confirmation": bool(run.require_confirmation),
+            }
         return {
             "type": "execute_run",
             "run_id": run_id,

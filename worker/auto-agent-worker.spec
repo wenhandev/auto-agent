@@ -23,7 +23,42 @@ hiddenimports += collect_submodules("app.services")
 hiddenimports += collect_submodules("app.nodes")
 hiddenimports += collect_submodules("app.tools")
 hiddenimports += collect_submodules("app.exec")
+hiddenimports += collect_submodules("fastapi")
+hiddenimports += collect_submodules("google.adk")
 hiddenimports += [
+    "annotated_doc",
+    "annotated_types",
+    "starlette",
+    "starlette.routing",
+    "starlette.middleware",
+    "starlette.middleware.cors",
+    "starlette.responses",
+    "starlette.requests",
+    "starlette.websockets",
+    "starlette.concurrency",
+    "starlette.background",
+    "starlette.datastructures",
+    "starlette.types",
+    "uvicorn",
+    "uvicorn.logging",
+    "uvicorn.loops",
+    "uvicorn.loops.auto",
+    "uvicorn.protocols",
+    "uvicorn.protocols.http",
+    "uvicorn.protocols.http.auto",
+    "uvicorn.protocols.http.h11_impl",
+    "uvicorn.protocols.websockets",
+    "uvicorn.protocols.websockets.auto",
+    "uvicorn.protocols.websockets.websockets_impl",
+    "uvicorn.lifespan",
+    "uvicorn.lifespan.on",
+    "uvicorn.config",
+    "uvicorn.server",
+    "uvicorn.main",
+    "uvicorn.importer",
+    "h11",
+    "httptools",
+    "watchfiles",
     "app.worker.cli",
     "app.services.runtime_engine",
     "app.services.browser_pool",
@@ -57,7 +92,7 @@ hiddenimports += [
 datas: list[tuple[str, str]] = []
 binaries: list[tuple[str, str]] = []
 
-for pkg in ("playwright", "greenlet"):
+for pkg in ("playwright", "greenlet", "fastapi", "google.adk", "uvicorn", "starlette", "annotated_doc"):
     pkg_datas, pkg_binaries, pkg_hidden = collect_all(pkg)
     datas += pkg_datas
     binaries += pkg_binaries
@@ -79,8 +114,6 @@ a = Analysis(
         "pandas",
         "IPython",
         "pytest",
-        "uvicorn",
-        "fastapi",
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

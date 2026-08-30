@@ -4,18 +4,19 @@
 
 ## 2. Tauri auto-spawn
 
-- [x] 2.1 Spawn local cloud on setup: `uvicorn app.main:app --host 127.0.0.1 --port 8001`
+- [x] 2.1 Spawn local cloud on setup: `uvicorn app.main:app --host 127.0.0.1 --port 8001` (dev only)
 - [x] 2.2 Extend sidecar spawn (dev + release when binary exists)
 - [x] 2.3 Use `resolve_python_path()` → `backend/.venv/bin/python`
 - [x] 2.4 Stop cloud + sidecar on app exit
-- [ ] 2.5 Release: bundle `auto-agent-cloud` PyInstaller binary (future)
+- [x] 2.5 Release: skip local cloud spawn — production uses remote cloud only (`VITE_CLOUD_URL`); bundled sidecar only
 
 ## 3. Desktop UI
 
-- [x] 3.1 Default login cloud URL `http://127.0.0.1:8001`
+- [x] 3.1 Default login cloud URL `http://127.0.0.1:8001` (dev); production bakes `https://rpa.wenhandev.com`
 - [x] 3.2 Replace SidecarGate with RuntimeGate (cloud + sidecar health)
 - [x] 3.3 Remove manual-start messaging from splash / error screens
 - [x] 3.4 Optional: sidecar `GET /ready` checks cloud reachable
+- [x] 3.5 OAuth login decoupled from sidecar — cloud exchange completes first; sidecar sync retries in background
 
 ## 4. Docs
 
@@ -24,6 +25,8 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Kill 8001/3921, `npm run tauri:dev` — both services auto-start
+- [ ] 5.1 Kill 8001/3921, `npm run tauri:dev` — both services auto-start (dev)
 - [ ] 5.2 `npm run build` in `desktop/` passes
 - [ ] 5.3 Backend tests if daemon touched
+- [x] 5.4 PyInstaller sidecar starts and responds to `GET /health`
+- [ ] 5.5 Production DMG: Google OAuth end-to-end against `https://rpa.wenhandev.com`

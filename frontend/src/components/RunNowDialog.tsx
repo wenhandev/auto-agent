@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiClient } from "@/api-platform";
+import { webPlatformPolicy } from "@/lib/webPlatformPolicy";
 import type { RunCreate } from "@/types-platform";
 import type { WorkflowParameter } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -54,16 +55,26 @@ export function RunNowDialog({
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  const runtimeQuery = useQuery({
+    queryKey: ["settings", "runtime"],
+    queryFn: () => apiClient.settings.runtime(),
+    enabled: open,
+    staleTime: 60_000,
+  });
+  const workerOnly = runtimeQuery.data?.worker_only ?? false;
+  const showBrowserOptions =
+    webPlatformPolicy.showBrowserSessions || webPlatformPolicy.showBrowserProfiles;
+
   const profilesQuery = useQuery({
     queryKey: ["browser-profiles"],
     queryFn: () => apiClient.browserProfiles.list(),
-    enabled: open,
+    enabled: open && showBrowserOptions && webPlatformPolicy.showBrowserProfiles,
   });
 
   const sessionsQuery = useQuery({
     queryKey: ["browser-sessions"],
     queryFn: () => apiClient.browserSessions.list(),
-    enabled: open,
+    enabled: open && showBrowserOptions && webPlatformPolicy.showBrowserSessions,
     refetchInterval: open ? 15_000 : false,
   });
 
@@ -79,12 +90,12 @@ export function RunNowDialog({
       setValues(buildParameterDefaults(parameters));
       setBrowserProfileId("");
       setBrowserSessionId("");
-      setExecutionMode("cloud");
+      setExecutionMode(workerOnly ? "worker" : "cloud");
       setWorkerPool("default");
       setWorkerId("");
       setError(null);
     }
-  }, [open, parameters]);
+  }, [open, parameters, workerOnly]);
 
   async function handleSubmit() {
     try {
@@ -179,14 +190,21 @@ export function RunNowDialog({
                   : t("runDialog.executionModeCloudHint")}
               </p>
             </div>
-            <Switch
-              id="execution-mode"
-              checked={executionMode === "worker"}
-              onCheckedChange={(checked) =>
-                setExecutionMode(checked ? "worker" : "cloud")
-              }
-              disabled={submitting || uploading}
-            />
+            {!workerOnly && (
+              <Switch
+                id="execution-mode"
+                checked={executionMode === "worker"}
+                onCheckedChange={(checked) =>
+                  setExecutionMode(checked ? "worker" : "cloud")
+                }
+                disabled={submitting || uploading}
+              />
+            )}
+            {workerOnly && (
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("runDialog.executionModeWorkerOnly")}
+              </span>
+            )}
           </div>
 
           {executionMode === "worker" && (
@@ -226,7 +244,9 @@ export function RunNowDialog({
             </>
           )}
 
-          {executionMode === "cloud" && liveSessions.length > 0 && (
+          {executionMode === "cloud" &&
+            webPlatformPolicy.showBrowserSessions &&
+            liveSessions.length > 0 && (
             <div className="flex flex-col gap-1">
               <Label>{t("runDialog.browserSession")}</Label>
               <Select
@@ -252,7 +272,7 @@ export function RunNowDialog({
             </div>
           )}
 
-          {profiles.length > 0 && (
+          {webPlatformPolicy.showBrowserProfiles && profiles.length > 0 && (
             <div className="flex flex-col gap-1">
               <Label>{t("runDialog.browserProfile")}</Label>
               <Select

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { apiClient, ApiError } from "@/api-platform";
+import { webPlatformPolicy } from "@/lib/webPlatformPolicy";
 import { routePath } from "@/routes";
 import type {
   WorkflowCreate,
@@ -219,6 +220,7 @@ export function WorkflowsListPage() {
   const items = listQuery.data ?? [];
   const isLoading = listQuery.isLoading;
   const error = listQuery.error;
+  const canCreate = webPlatformPolicy.canCreateWorkflows;
 
   return (
     <div className="flex h-full flex-col overflow-auto">
@@ -228,13 +230,19 @@ export function WorkflowsListPage() {
             {t("pages.workflows.title")}
           </div>
           <div className="text-xs text-muted-foreground">
-            {t("pages.workflows.subtitle")}
+            {t(
+              canCreate
+                ? "pages.workflows.subtitle"
+                : "pages.workflows.subtitleWeb",
+            )}
           </div>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t("pages.workflows.newButton")}
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t("pages.workflows.newButton")}
+          </Button>
+        )}
       </div>
       <div className="flex-1 p-6">
         {error && (
@@ -252,10 +260,18 @@ export function WorkflowsListPage() {
             <div className="text-base font-medium text-foreground">
               {t("pages.workflows.empty")}
             </div>
-            <div className="text-sm">{t("pages.workflows.emptyHint")}</div>
-            <Button onClick={() => setModalOpen(true)}>
-              {t("pages.workflows.createCta")}
-            </Button>
+            <div className="text-sm">
+              {t(
+                canCreate
+                  ? "pages.workflows.emptyHint"
+                  : "pages.workflows.emptyHintWeb",
+              )}
+            </div>
+            {canCreate && (
+              <Button onClick={() => setModalOpen(true)}>
+                {t("pages.workflows.createCta")}
+              </Button>
+            )}
           </div>
         )}
         {!isLoading && items.length > 0 && (
@@ -274,14 +290,16 @@ export function WorkflowsListPage() {
           </div>
         )}
       </div>
-      <CreateModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={(id) => {
-          setModalOpen(false);
-          navigate(routePath.workflowDetail(id));
-        }}
-      />
+      {canCreate && (
+        <CreateModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onCreated={(id) => {
+            setModalOpen(false);
+            navigate(routePath.workflowDetail(id));
+          }}
+        />
+      )}
     </div>
   );
 }

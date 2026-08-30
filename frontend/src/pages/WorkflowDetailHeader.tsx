@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Play, Save, Square } from "lucide-react";
 import { routePath } from "@/routes";
+import { webPlatformPolicy } from "@/lib/webPlatformPolicy";
 import type { PlatformRunStatus } from "@/platformStore";
 import type { WorkflowVersionOut } from "@/types-platform";
 import { Button } from "@/components/ui/button";
@@ -123,11 +124,13 @@ export function WorkflowDetailHeader({
           </SelectContent>
         </Select>
       )}
-      <Button asChild variant="ghost" size="sm">
-        <Link to={routePath.credentials()}>
-          {t("pages.workflowDetail.credentialsLink")}
-        </Link>
-      </Button>
+      {webPlatformPolicy.showCloudCredentials && (
+        <Button asChild variant="ghost" size="sm">
+          <Link to={routePath.credentials()}>
+            {t("pages.workflowDetail.credentialsLink")}
+          </Link>
+        </Button>
+      )}
       {onSave && (
         <Button
           onClick={onSave}
